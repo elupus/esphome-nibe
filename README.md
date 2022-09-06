@@ -8,6 +8,30 @@ When Modbus adapter support is enabled from the heat pump UI, the heat pump will
 
 A telegram from the heat pump must be acknowledged, otherwise the heat pump will raise an alarm and go into the alarm state. Acknowledgement (ACK or NAK) responses should be sent correctly. This component will ACK/NAK and then forward received data to a configured UDP port on a remote host. It will also accept read/write requests on UDP to request other parameters.
 
+## Setup
+
+You will need an esp32 with some type of RS485 converter hooked up to an UART.
+
+### Configuration example
+
+Add the following to a ESPHome configuration to enable the udp gateway feature to the device.
+
+```yaml
+external_components:
+  - source: https://github.com/elupus/esphome-nibe.git
+
+nibegw:
+  dir_pin: GPIO4
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  uart_id: 1
+  target_ip: 192.168.16.130
+  acknowledge:
+    modbus40: true
+    rmu40: false
+    sms40: false
+```
+
 ## Parsing
 
 Currently no actual parsing of the payload is performed on the ESPHome device, this must be handled by external application.
