@@ -24,6 +24,8 @@ CONF_ACKNOWLEDGE_SMS40 = "sms40"
 ACKNOWLEDGE_SCHEMA = cv.Schema(
     {
         cv.Optional(CONF_ACKNOWLEDGE_MODBUS40): cv.boolean,
+        cv.Optional(CONF_ACKNOWLEDGE_RMU40): cv.boolean,
+        cv.Optional(CONF_ACKNOWLEDGE_SMS40): cv.boolean,
     }
 )
 
@@ -62,17 +64,17 @@ async def to_code(config):
         cg.add(var.gw().setSendAcknowledge(1))
         cg.add(
             var.gw().setAckModbus40Address(
-                config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_MODBUS40, 0)
+                int(config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_MODBUS40, False))
             )
         )
         cg.add(
             var.gw().setAckRmu40Address(
-                config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_RMU40, 0)
+                int(config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_RMU40, False))
             )
         )
         cg.add(
             var.gw().setAckSms40Address(
-                config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_SMS40, 0)
+                int(config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_SMS40, False))
             )
         )
     else:
