@@ -10,7 +10,7 @@ A telegram from the heat pump must be acknowledged, otherwise the heat pump will
 
 ## Setup
 
-You will need an esp32 with some type of RS485 converter hooked up to an UART.
+You will need an esp32 with some type of RS485 converter hooked up to a UART. It can either be a MAX485 based chip or a chip with automatic flow control like a MAX3485. If using an automatic flow controlling chip, set the `dir_pin` to an unused GPIO pin on your board.
 
 ### Configuration example
 
