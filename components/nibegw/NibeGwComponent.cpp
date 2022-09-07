@@ -1,14 +1,13 @@
 #include "NibeGwComponent.h"
 
-NibeGwComponent* NibeGwComponent::instance;
-
 NibeGwComponent::NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pin)
 {
     HardwareSerial* serial = new HardwareSerial(uart_no);
     gw_ = new NibeGw(serial, dir_pin, rx_pin, tx_pin);
-    gw_->setCallback(callback_msg_received_wrapper, callback_msg_token_received_wrapper);
+    gw_->setCallback(std::bind(&NibeGwComponent::callback_msg_received, this, std::placeholders::_1, std::placeholders::_2),
+                     std::bind(&NibeGwComponent::callback_msg_token_received, this, std::placeholders::_1, std::placeholders::_2));
 #ifdef ENABLE_NIBE_DEBUG
-    gw_->setDebugCallback(callback_debug_wrapper);
+    gw_->setDebugCallback(std::bind(&NibeGwComponent::callback_debug_wrapper, this, std::placeholders::_1, std::placeholders::_2);
 #endif
     gw_->setVerboseLevel(1);
 }
@@ -67,7 +66,6 @@ void NibeGwComponent::callback_debug(byte verbose, char* data)
 
 void NibeGwComponent::setup() {
     ESP_LOGCONFIG(TAG, "Starting up sending to: %s:%d", udp_target_ip_.toString().c_str(), udp_target_port_);
-    instance = this;
     gw_->connect();
     udp_read_.begin(udp_read_port_);
     udp_write_.begin(udp_write_port_);
