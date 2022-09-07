@@ -5,6 +5,7 @@ from esphome.const import (
     CONF_RX_PIN,
     CONF_TX_PIN,
     CONF_UART_ID,
+    CONF_DEBUG,
 )
 from esphome import pins
 
@@ -20,6 +21,8 @@ CONF_ACKNOWLEDGE = "acknowledge"
 CONF_ACKNOWLEDGE_MODBUS40 = "modbus40"
 CONF_ACKNOWLEDGE_RMU40 = "rmu40"
 CONF_ACKNOWLEDGE_SMS40 = "sms40"
+CONF_READ_PORT = "read_port"
+CONF_WRITE_PORT = "write_port"
 
 ACKNOWLEDGE_SCHEMA = cv.Schema(
     {
@@ -34,11 +37,14 @@ CONFIG_SCHEMA = cv.Schema(
         cv.GenerateID(): cv.declare_id(NibeGwComponent),
         cv.Required(CONF_TARGET_IP): cv.ipv4,
         cv.Optional(CONF_TARGET_PORT, default=9999): cv.port,
+        cv.Optional(CONF_READ_PORT, default=9999): cv.port,
+        cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
         cv.Optional(CONF_ACKNOWLEDGE, default={}): ACKNOWLEDGE_SCHEMA,
         cv.Optional(CONF_RX_PIN): pins.internal_gpio_input_pin_number,
         cv.Optional(CONF_TX_PIN): pins.internal_gpio_output_pin_number,
         cv.Optional(CONF_DIR_PIN): pins.internal_gpio_output_pin_number,
         cv.Optional(CONF_UART_ID, default=2): int,
+        cv.Optional(CONF_DEBUG, default=False): cv.boolean
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
@@ -53,12 +59,16 @@ async def to_code(config):
     )
     await cg.register_component(var, config)
 
-    cg.add_build_flag("-DENABLE_NIBE_DEBUG")
+    if config[CONF_DEBUG]:
+        cg.add_build_flag("-DENABLE_NIBE_DEBUG")
+
     cg.add_library("WiFi", None)
     cg.add_library("WiFiUdp", None)
 
     cg.add(var.set_target_ip(str(config[CONF_TARGET_IP])))
     cg.add(var.set_target_port(config[CONF_TARGET_PORT]))
+    cg.add(var.set_read_port(config[CONF_READ_PORT]))
+    cg.add(var.set_write_port(config[CONF_WRITE_PORT]))
 
     if config[CONF_ACKNOWLEDGE]:
         cg.add(var.gw().setSendAcknowledge(1))

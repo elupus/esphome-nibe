@@ -12,8 +12,8 @@ using namespace esphome;
 class NibeGwComponent: public Component {
     float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
     const char* TAG = "nibegw";
-    const int udp_read_port_  = 9999;
-    const int udp_write_port_ = 10000;
+    int udp_read_port_  = 9999;
+    int udp_write_port_ = 10000;
     int udp_target_port_;
     IPAddress udp_target_ip_;
 
@@ -47,6 +47,8 @@ class NibeGwComponent: public Component {
     public:
 
     void set_target_port(int port) { udp_target_port_ = port; };
+    void set_read_port(int port) { udp_read_port_ = port; };
+    void set_write_port(int port) { udp_write_port_ = port; };
     void set_target_ip(std::string ip) { udp_target_ip_.fromString(ip.c_str()); };
  
     NibeGw& gw() { return *gw_; }
