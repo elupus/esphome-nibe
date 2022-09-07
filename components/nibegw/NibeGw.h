@@ -37,6 +37,7 @@
 #define NibeGw_h
 
 #include <Arduino.h>
+#include <functional>
 
 #define HARDWARE_SERIAL_WITH_PINS
 //#define HARDWARE_SERIAL
@@ -61,11 +62,11 @@ enum eTokenType
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
 #define MAX_DATA_LEN 128
 
-#define NIBE_CALLBACK_MSG_RECEIVED void (*callback_msg_received)(const byte* const data, int len)
-#define NIBE_CALLBACK_MSG_RECEIVED_TOKEN int (*callback_msg_token_received)(eTokenType token, byte* data)
+typedef std::function<void(const byte* const data, int len)> callback_msg_received_type;
+typedef std::function<int(eTokenType token, byte* data)> callback_msg_token_received_type;
 
 #ifdef ENABLE_NIBE_DEBUG
-#define NIBE_CALLBACK_MSG_RECEIVED_DEBUG void (*debug)(byte verbose, char* data)
+typedef std::function<void(byte verbose, char* data)> callback_debug_type;
 #endif
 
 #define SMS40     0x16
@@ -89,8 +90,8 @@ class NibeGw
     #else
       Serial_* RS485;
     #endif
-    NIBE_CALLBACK_MSG_RECEIVED;
-    NIBE_CALLBACK_MSG_RECEIVED_TOKEN;
+    callback_msg_received_type callback_msg_received;
+    callback_msg_token_received_type callback_msg_token_received;
     byte verbose;
     boolean ackModbus40;
     boolean ackSms40;
@@ -104,7 +105,7 @@ class NibeGw
     boolean shouldAckNakSend(byte address);
 
     #ifdef ENABLE_NIBE_DEBUG
-    NIBE_CALLBACK_MSG_RECEIVED_DEBUG;
+    callback_debug_type debug;
     char debug_buf[100];
     #endif
 
@@ -116,10 +117,10 @@ class NibeGw
     #else
       NibeGw(Serial_* serial, int RS485DirectionPin);
     #endif
-    NibeGw& setCallback(NIBE_CALLBACK_MSG_RECEIVED, NIBE_CALLBACK_MSG_RECEIVED_TOKEN);
+    NibeGw& setCallback(callback_msg_received_type callback_msg_received, callback_msg_token_received_type callback_msg_token_received);
 
     #ifdef ENABLE_NIBE_DEBUG
-    NibeGw& setDebugCallback(NIBE_CALLBACK_MSG_RECEIVED_DEBUG);
+    NibeGw& setDebugCallback(callback_debug_type debug);
     #endif
 
     void connect();

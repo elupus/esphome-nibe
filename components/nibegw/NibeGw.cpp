@@ -80,7 +80,7 @@ void NibeGw::setVerboseLevel(byte level)
   verbose = level;
 }
 
-NibeGw& NibeGw::setCallback(void(*callback_msg_received)(const byte* const data, int len), int(*callback_msg_token_received)(eTokenType token, byte* data))
+NibeGw& NibeGw::setCallback(callback_msg_received_type callback_msg_received, callback_msg_token_received_type callback_msg_token_received)
 {
   this->callback_msg_received = callback_msg_received;
   this->callback_msg_token_received = callback_msg_token_received;
@@ -89,7 +89,7 @@ NibeGw& NibeGw::setCallback(void(*callback_msg_received)(const byte* const data,
 }
 
 #ifdef ENABLE_NIBE_DEBUG
-NibeGw& NibeGw::setDebugCallback(void(*debug)(byte verbose, char* data))
+NibeGw& NibeGw::setDebugCallback(callback_debug_type debug)
 {
   this->debug = debug;
   return *this;
