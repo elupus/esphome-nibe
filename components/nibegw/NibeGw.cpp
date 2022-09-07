@@ -202,6 +202,10 @@ void NibeGw::loop()
             case -2:  state = STATE_CRC_FAILURE; break; // Checksum error
             default:  state = STATE_OK_MESSAGE_RECEIVED; break;
           }
+
+          if (msglen) {
+            callback_msg_received(buffer, index);
+          }
         }
       }
       break;
@@ -254,8 +258,6 @@ void NibeGw::loop()
 #endif
         if (shouldAckNakSend(buffer[2]))
           sendAck();
-
-        callback_msg_received(buffer, index);
       }
       state = STATE_WAIT_START;
       break;
