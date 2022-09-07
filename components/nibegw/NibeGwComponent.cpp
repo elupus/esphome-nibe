@@ -73,5 +73,7 @@ void NibeGwComponent::setup() {
 
 void NibeGwComponent::loop()
 {
-    gw_->loop();
+    do {
+        gw_->loop();
+    } while(gw_->messageStillOnProgress());
 }
