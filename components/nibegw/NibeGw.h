@@ -38,6 +38,7 @@
 
 #include <Arduino.h>
 #include <functional>
+#include <set>
 
 #define HARDWARE_SERIAL_WITH_PINS
 //#define HARDWARE_SERIAL
@@ -93,9 +94,7 @@ class NibeGw
     callback_msg_received_type callback_msg_received;
     callback_msg_token_received_type callback_msg_token_received;
     byte verbose;
-    boolean ackModbus40;
-    boolean ackSms40;
-    boolean ackRmu40;
+    std::set<byte> addressAcknowledge;
     boolean sendAcknowledge;
 
     int checkNibeMessage(const byte* const data, byte len);
@@ -130,10 +129,18 @@ class NibeGw
     boolean messageStillOnProgress();
     void loop();
 
-    void setAckModbus40Address(boolean val);
-    void setAckSms40Address(boolean val);
-    void setAckRmu40Address(boolean val);
-    void setSendAcknowledge(boolean val);
+    void setAcknowledge(byte address, boolean val)
+    {
+      if (val)
+        addressAcknowledge.insert(address);
+      else
+        addressAcknowledge.erase(address);
+    }
+
+    void setAckModbus40Address(boolean val) { setAcknowledge(MODBUS40, val); }
+    void setAckSms40Address(boolean val) { setAcknowledge(SMS40, val); }
+    void setAckRmu40Address(boolean val) { setAcknowledge(RMU40, val); }
+    void setSendAcknowledge(boolean val );
 };
 
 #endif

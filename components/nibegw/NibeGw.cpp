@@ -32,9 +32,6 @@ NibeGw::NibeGw(Serial_* serial, int RS485DirectionPin)
     this->RS485TxPin = RS485TxPin;
   #endif  
   verbose = 0;
-  ackModbus40 = true;
-  ackSms40 = false;
-  ackRmu40 = false;
   sendAcknowledge = true;
   state = STATE_WAIT_START;
   connectionState = false;
@@ -95,21 +92,6 @@ NibeGw& NibeGw::setDebugCallback(callback_debug_type debug)
   return *this;
 }
 #endif
-
-void NibeGw::setAckModbus40Address(boolean val)
-{
-  ackModbus40 = val;
-}
-
-void NibeGw::setAckSms40Address(boolean val)
-{
-  ackSms40 = val;
-}
-
-void NibeGw::setAckRmu40Address(boolean val)
-{
-  ackRmu40 = val;
-}
 
 void NibeGw::setSendAcknowledge(boolean val)
 {
@@ -379,15 +361,5 @@ void NibeGw::sendNak()
 
 boolean NibeGw::shouldAckNakSend(byte address)
 {
-  if (sendAcknowledge)
-  {
-    if (address == MODBUS40 && ackModbus40)
-      return true;
-    else if (address == RMU40 && ackRmu40)
-      return true;
-    else if (address == SMS40 && ackSms40)
-      return true;
-  }
-
-  return false;
+  return addressAcknowledge.count(address) != 0;
 }

@@ -8,6 +8,7 @@ from esphome.const import (
     CONF_DEBUG,
 )
 from esphome import pins
+from enum import IntEnum
 
 DEPENDENCIES = ["logger"]
 
@@ -24,13 +25,21 @@ CONF_ACKNOWLEDGE_SMS40 = "sms40"
 CONF_READ_PORT = "read_port"
 CONF_WRITE_PORT = "write_port"
 
-ACKNOWLEDGE_SCHEMA = cv.Schema(
-    {
-        cv.Optional(CONF_ACKNOWLEDGE_MODBUS40): cv.boolean,
-        cv.Optional(CONF_ACKNOWLEDGE_RMU40): cv.boolean,
-        cv.Optional(CONF_ACKNOWLEDGE_SMS40): cv.boolean,
-    }
-)
+class Addresses(IntEnum):
+    MODBUS40 = 0x20
+    SMS40 = 0x16
+    RMU40_S1 = 0x19
+    RMU40_S2 = 0x1A
+    RMU40_S3 = 0x1B
+    RMU40_S4 = 0x1C
+
+
+def addresses_string(value):
+    try:
+        return Addresses[value].value
+    except KeyError:
+        raise ValueError(f"{value} is not a valid member of Address")
+
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -39,7 +48,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_TARGET_PORT, default=9999): cv.port,
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
-        cv.Optional(CONF_ACKNOWLEDGE, default={}): ACKNOWLEDGE_SCHEMA,
+        cv.Optional(CONF_ACKNOWLEDGE, default=[]): [cv.Any(addresses_string, cv.Coerce(int))],
         cv.Optional(CONF_RX_PIN): pins.internal_gpio_input_pin_number,
         cv.Optional(CONF_TX_PIN): pins.internal_gpio_output_pin_number,
         cv.Optional(CONF_DIR_PIN): pins.internal_gpio_output_pin_number,
@@ -72,20 +81,9 @@ async def to_code(config):
 
     if config[CONF_ACKNOWLEDGE]:
         cg.add(var.gw().setSendAcknowledge(1))
-        cg.add(
-            var.gw().setAckModbus40Address(
-                int(config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_MODBUS40, False))
+        for address in config[CONF_ACKNOWLEDGE]:
+            cg.add(
+                var.gw().setAcknowledge(address, True)
             )
-        )
-        cg.add(
-            var.gw().setAckRmu40Address(
-                int(config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_RMU40, False))
-            )
-        )
-        cg.add(
-            var.gw().setAckSms40Address(
-                int(config[CONF_ACKNOWLEDGE].get(CONF_ACKNOWLEDGE_SMS40, False))
-            )
-        )
     else:
         cg.add(var.gw().setSendAcknowledge(0))
