@@ -27,9 +27,7 @@ nibegw:
   uart_id: 1
   target_ip: 192.168.16.130
   acknowledge:
-    modbus40: true
-    rmu40: false
-    sms40: false
+    - MODBUS40
 ```
 
 ## Parsing
