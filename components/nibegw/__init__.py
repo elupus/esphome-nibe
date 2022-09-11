@@ -18,6 +18,7 @@ CONF_DIR_PIN = "dir_pin"
 CONF_TARGET_PORT = "target_port"
 CONF_TARGET_IP = "target_ip"
 CONF_ACKNOWLEDGE = "acknowledge"
+CONF_UDP = "udp"
 
 CONF_ACKNOWLEDGE_MODBUS40 = "modbus40"
 CONF_ACKNOWLEDGE_RMU40 = "rmu40"
@@ -41,14 +42,20 @@ def addresses_string(value):
         raise ValueError(f"{value} is not a valid member of Address")
 
 
-CONFIG_SCHEMA = cv.Schema(
+UDP_SCHEMA = cv.Schema(
     {
-        cv.GenerateID(): cv.declare_id(NibeGwComponent),
         cv.Required(CONF_TARGET_IP): cv.ipv4,
         cv.Optional(CONF_TARGET_PORT, default=9999): cv.port,
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
+    }
+)
+
+CONFIG_SCHEMA = cv.Schema(
+    {
+        cv.GenerateID(): cv.declare_id(NibeGwComponent),
         cv.Optional(CONF_ACKNOWLEDGE, default=[]): [cv.Any(addresses_string, cv.Coerce(int))],
+        cv.Required(CONF_UDP): UDP_SCHEMA,
         cv.Optional(CONF_RX_PIN): pins.internal_gpio_input_pin_number,
         cv.Optional(CONF_TX_PIN): pins.internal_gpio_output_pin_number,
         cv.Optional(CONF_DIR_PIN): pins.internal_gpio_output_pin_number,
@@ -74,10 +81,11 @@ async def to_code(config):
     cg.add_library("WiFi", None)
     cg.add_library("WiFiUdp", None)
 
-    cg.add(var.set_target_ip(str(config[CONF_TARGET_IP])))
-    cg.add(var.set_target_port(config[CONF_TARGET_PORT]))
-    cg.add(var.set_read_port(config[CONF_READ_PORT]))
-    cg.add(var.set_write_port(config[CONF_WRITE_PORT]))
+    if udp := config.get(CONF_UDP):
+        cg.add(var.set_target_ip(str(udp[CONF_TARGET_IP])))
+        cg.add(var.set_target_port(udp[CONF_TARGET_PORT]))
+        cg.add(var.set_read_port(udp[CONF_READ_PORT]))
+        cg.add(var.set_write_port(udp[CONF_WRITE_PORT]))
 
     if config[CONF_ACKNOWLEDGE]:
         cg.add(var.gw().setSendAcknowledge(1))
