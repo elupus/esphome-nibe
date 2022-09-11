@@ -25,7 +25,8 @@ nibegw:
   rx_pin: GPIO16
   tx_pin: GPIO17
   uart_id: 1
-  target_ip: 192.168.16.130
+  udp:
+    target_ip: 192.168.16.130
   acknowledge:
     - MODBUS40
 ```
