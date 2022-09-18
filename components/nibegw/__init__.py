@@ -25,6 +25,7 @@ CONF_ACKNOWLEDGE_RMU40 = "rmu40"
 CONF_ACKNOWLEDGE_SMS40 = "sms40"
 CONF_READ_PORT = "read_port"
 CONF_WRITE_PORT = "write_port"
+CONF_SOURCE_IP = "source_ip"
 
 class Addresses(IntEnum):
     MODBUS40 = 0x20
@@ -48,6 +49,7 @@ UDP_SCHEMA = cv.Schema(
         cv.Optional(CONF_TARGET_PORT, default=9999): cv.port,
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
+        cv.Optional(CONF_SOURCE_IP): cv.ensure_list(cv.ipv4)
     }
 )
 
@@ -86,6 +88,8 @@ async def to_code(config):
         cg.add(var.set_target_port(udp[CONF_TARGET_PORT]))
         cg.add(var.set_read_port(udp[CONF_READ_PORT]))
         cg.add(var.set_write_port(udp[CONF_WRITE_PORT]))
+        for source in udp[CONF_SOURCE_IP]:
+            cg.add(var.add_source_ip(str(source)))
 
     if config[CONF_ACKNOWLEDGE]:
         cg.add(var.gw().setSendAcknowledge(1))

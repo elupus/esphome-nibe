@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "esphome.h"
 #include "esphome/core/component.h"
 
@@ -16,6 +18,7 @@ class NibeGwComponent: public Component {
     int udp_write_port_ = 10000;
     int udp_target_port_;
     IPAddress udp_target_ip_;
+    std::set<IPAddress> udp_source_ip_;
 
     NibeGw* gw_;
 
@@ -34,7 +37,8 @@ class NibeGwComponent: public Component {
     void set_read_port(int port) { udp_read_port_ = port; };
     void set_write_port(int port) { udp_write_port_ = port; };
     void set_target_ip(std::string ip) { udp_target_ip_.fromString(ip.c_str()); };
- 
+    void add_source_ip(std::string ip) { udp_source_ip_.insert(IPAddress().fromString(ip.c_str())); };
+
     NibeGw& gw() { return *gw_; }
 
     NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pin);
