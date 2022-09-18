@@ -29,6 +29,9 @@ int NibeGwComponent::token_request(WiFiUDP& udp, byte* data)
     if (size == 0) {
         return 0;
     }
+
+    ESP_LOGD(TAG, "UDP Packet token data of %d bytes received", size);
+
     if (size > MAX_DATA_LEN) {
         ESP_LOGE(TAG, "UDP Packet too large: %d", size);
         return 0;
