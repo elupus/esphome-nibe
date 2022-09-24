@@ -203,19 +203,19 @@ void NibeGw::loop()
       break;
 
     case STATE_OK_MESSAGE_RECEIVED:
-      if (buffer[0] == 0x5C && buffer[1] == 0x00 &&
-          buffer[2] == 0x20 && buffer[4] == 0x00 &&
-          (buffer[3] == 0x69 || buffer[3] == 0x6B) )
+      if (!shouldAckNakSend(buffer[2])) {
+        state = STATE_WAIT_START;
+        break;
+      }
+
+      if (buffer[0] == 0x5C && buffer[1] == 0x00 && buffer[4] == 0x00)
       {
-
-        eTokenType token = buffer[3] == 0x6B ? WRITE_TOKEN : READ_TOKEN;
-
 #ifdef ENABLE_NIBE_DEBUG
         if (debug)
           debug(1, "Token received\n");
 #endif
 
-        int msglen = callback_msg_token_received(token, buffer);
+        int msglen = callback_msg_token_received((eTokenType)(buffer[3]), buffer);
         if (msglen > 0)
         {
           sendData(buffer, (byte) msglen);
@@ -226,8 +226,7 @@ void NibeGw::loop()
           if (debug)
             debug(2, "No message to send\n");
 #endif
-          if (shouldAckNakSend(buffer[2]))
-            sendAck();
+          sendAck();
         }
       }
       else
@@ -238,8 +237,7 @@ void NibeGw::loop()
           debug(1, "Message received\n");
         }
 #endif
-        if (shouldAckNakSend(buffer[2]))
-          sendAck();
+        sendAck();
       }
       state = STATE_WAIT_START;
       break;

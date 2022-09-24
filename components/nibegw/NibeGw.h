@@ -56,8 +56,10 @@ enum eState
 
 enum eTokenType
 {
-  READ_TOKEN,
-  WRITE_TOKEN
+  READ_TOKEN = 0x69,
+  WRITE_TOKEN = 0x6B,
+  WRITE_RMU_TOKEN = 0x60,
+  ACCESSORY_TOKEN = 0xEE,
 };
     
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
