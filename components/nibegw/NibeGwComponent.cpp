@@ -55,6 +55,31 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
         return token_request(udp_write_, data);
     }
 
+    // Try to match nibepi dummy data on some of these fields.
+    if (data[2] == 0x19 || data[2] == 0x1A || data[2] == 0x1B || data[2] == 0x1C)
+    {
+        if (token == ACCESSORY_TOKEN) {
+            data[0] = 0xC0;
+            data[1] = ACCESSORY_TOKEN;
+            data[2] = 0x03;
+            data[3] = 0xEE; // RMU ?, MODBUS version low
+            data[4] = 0x03; // RMU version low, MODBUS version high
+            data[5] = 0x01; // RMU version high, MODBUS address?
+            data[6] = 0xC1;
+            return 7;
+        }
+
+        if (token == RMU_DATA_TOKEN) {
+            data[0] = 0xC0;
+            data[1] = RMU_WRITE_TOKEN;
+            data[2] = 0x02;
+            data[3] = 0x63;
+            data[4] = 0x00;
+            data[5] = 0xC1;
+            return 6;
+        }
+    }
+
     return 0;
 }
 
