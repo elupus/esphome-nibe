@@ -23,36 +23,47 @@ void NibeGwComponent::callback_msg_received(const byte* const data, int len)
     }
 }
 
-int NibeGwComponent::token_request(WiFiUDP& udp, byte* data)
+void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte command)
 {
     int size = udp.parsePacket();
     if (size == 0) {
-        return 0;
+        return;
     }
 
     ESP_LOGD(TAG, "UDP Packet token data of %d bytes received", size);
 
     if (size > MAX_DATA_LEN) {
         ESP_LOGE(TAG, "UDP Packet too large: %d", size);
-        return 0;
+        return;
     }
 
     if (udp_source_ip_.size() && udp_source_ip_.count(udp.remoteIP()) != 0) {
         ESP_LOGW(TAG, "UDP Packet wrong wrong ip ignored");
-        return 0;
+        return;
     }
 
-    return udp.read(data, size);
+    request_data_type request;
+    request.reserve(size);
+    size = udp.read(&request.front(), size);
+    request.resize(size);
+    requests_[request_key_type(address, command)].push(std::move(request));
 }
 
 int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
 {
-    if (token == READ_TOKEN) {
-        return token_request(udp_read_, data);
-    }
 
-    if (token == WRITE_TOKEN) {
-        return token_request(udp_write_, data);
+    request_key_type key {data[2], static_cast<byte>(token)};
+
+    const auto& it = requests_.find(key);
+    if (it != requests_.end()) {
+        auto& queue = it->second;
+        if (!queue.empty()) {
+            auto request = std::move(queue.front());
+            queue.pop();
+            auto len = std::min(request.size(), (size_t)MAX_DATA_LEN);
+            std::copy_n(request.begin(), len, data);
+            return len;
+        }
     }
 
     // Try to match nibepi dummy data on some of these fields.
@@ -101,6 +112,8 @@ void NibeGwComponent::setup() {
 
 void NibeGwComponent::loop()
 {
+    token_request_cache(udp_read_, MODBUS40, READ_TOKEN);
+    token_request_cache(udp_write_, MODBUS40, WRITE_TOKEN);
     do {
         gw_->loop();
     } while(gw_->messageStillOnProgress());

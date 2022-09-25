@@ -1,6 +1,9 @@
 #pragma once
 
 #include <set>
+#include <queue>
+#include <vector>
+#include <cstddef>
 
 #include "esphome.h"
 #include "esphome/core/component.h"
@@ -20,6 +23,11 @@ class NibeGwComponent: public Component {
     IPAddress udp_target_ip_;
     std::set<IPAddress> udp_source_ip_;
 
+    typedef std::tuple<byte, byte>  request_key_type;
+    typedef std::vector<byte>       request_data_type;
+
+    std::map<request_key_type, std::queue<request_data_type>> requests_; 
+
     NibeGw* gw_;
 
     WiFiUDP udp_read_;
@@ -29,7 +37,7 @@ class NibeGwComponent: public Component {
     int callback_msg_token_received(eTokenType token, byte* data);
     void callback_debug(byte verbose, char* data);
 
-    int token_request(WiFiUDP& udp, byte* data);
+    void token_request_cache(WiFiUDP& udp, byte address, byte command);
 
     public:
 
