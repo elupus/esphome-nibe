@@ -58,7 +58,8 @@ enum eTokenType
 {
   READ_TOKEN = 0x69,
   WRITE_TOKEN = 0x6B,
-  WRITE_RMU_TOKEN = 0x60,
+  RMU_WRITE_TOKEN = 0x60,
+  RMU_DATA_TOKEN = 0x63,
   ACCESSORY_TOKEN = 0xEE,
 };
     
