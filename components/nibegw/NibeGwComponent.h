@@ -14,19 +14,22 @@
 
 using namespace esphome;
 
+
+typedef std::tuple<byte, byte>  request_key_type;
+typedef std::vector<byte>       request_data_type;
+
 class NibeGwComponent: public Component {
     float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
     const char* TAG = "nibegw";
+    const int requests_queue_max = 3;
     int udp_read_port_  = 9999;
     int udp_write_port_ = 10000;
     int udp_target_port_;
     IPAddress udp_target_ip_;
     std::set<IPAddress> udp_source_ip_;
 
-    typedef std::tuple<byte, byte>  request_key_type;
-    typedef std::vector<byte>       request_data_type;
-
     std::map<request_key_type, std::queue<request_data_type>> requests_; 
+    std::map<request_key_type, request_data_type>             requests_const_; 
 
     NibeGw* gw_;
 
@@ -37,7 +40,7 @@ class NibeGwComponent: public Component {
     int callback_msg_token_received(eTokenType token, byte* data);
     void callback_debug(byte verbose, char* data);
 
-    void token_request_cache(WiFiUDP& udp, byte address, byte command);
+    void token_request_cache(WiFiUDP& udp, byte address, byte token);
 
     public:
 
@@ -46,6 +49,20 @@ class NibeGwComponent: public Component {
     void set_write_port(int port) { udp_write_port_ = port; };
     void set_target_ip(std::string ip) { udp_target_ip_.fromString(ip.c_str()); };
     void add_source_ip(std::string ip) { udp_source_ip_.insert(IPAddress().fromString(ip.c_str())); };
+
+    void set_const_request(int address, int token, request_data_type request)
+    {
+        requests_const_[request_key_type(address, token)] = std::move(request);
+    }
+
+    void add_queued_request(int address, int token, request_data_type request)
+    {
+        auto& queue = requests_[request_key_type(address, token)];
+        if (queue.size() >= requests_queue_max) {
+            queue.pop();
+        }
+        queue.push(std::move(request));
+    }
 
     NibeGw& gw() { return *gw_; }
 

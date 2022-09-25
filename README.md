@@ -35,6 +35,16 @@ nibegw:
 
   acknowledge:
     - MODBUS40
+
+  # Constant replies to certain requests can be made
+  constants:
+    - address: MODBUS40
+      token: ACCESSORY
+      data: [
+            0x0A, # MODBUS version low
+            0x00, # MODBUS version high
+            0x02, # MODBUS address?
+      ]
 ```
 
 ## Parsing

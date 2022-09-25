@@ -1,3 +1,6 @@
+from operator import xor
+from functools import reduce
+
 import esphome.config_validation as cv
 import esphome.codegen as cg
 from esphome.const import (
@@ -8,7 +11,7 @@ from esphome.const import (
     CONF_DEBUG,
 )
 from esphome import pins
-from enum import IntEnum
+from enum import IntEnum, Enum
 
 DEPENDENCIES = ["logger"]
 
@@ -26,6 +29,11 @@ CONF_ACKNOWLEDGE_SMS40 = "sms40"
 CONF_READ_PORT = "read_port"
 CONF_WRITE_PORT = "write_port"
 CONF_SOURCE_IP = "source_ip"
+CONF_ADDRESS = "address"
+CONF_TOKEN = "token"
+CONF_COMMAND = "command"
+CONF_DATA = "data"
+CONF_CONSTANTS = "constants"
 
 class Addresses(IntEnum):
     MODBUS40 = 0x20
@@ -35,6 +43,13 @@ class Addresses(IntEnum):
     RMU40_S3 = 0x1B
     RMU40_S4 = 0x1C
 
+class Token(IntEnum):
+  MODBUS_READ = 0x69
+  MODBUS_WRITE = 0x6B
+  RMU_WRITE = 0x60
+  RMU_DATA = 0x63
+  ACCESSORY = 0xEE
+
 
 def addresses_string(value):
     try:
@@ -42,6 +57,17 @@ def addresses_string(value):
     except KeyError:
         raise ValueError(f"{value} is not a valid member of Address")
 
+def real_enum(enum: Enum):
+    return cv.enum({i.name: i.value for i in enum})
+
+CONSTANTS_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_ADDRESS): cv.Any(real_enum(Addresses), int),
+        cv.Required(CONF_TOKEN): cv.Any(real_enum(Token), int),
+        cv.Optional(CONF_COMMAND): cv.Any(real_enum(Token), int),
+        cv.Required(CONF_DATA): [int]
+    }
+)
 
 UDP_SCHEMA = cv.Schema(
     {
@@ -62,7 +88,8 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_TX_PIN): pins.internal_gpio_output_pin_number,
         cv.Optional(CONF_DIR_PIN): pins.internal_gpio_output_pin_number,
         cv.Optional(CONF_UART_ID, default=2): int,
-        cv.Optional(CONF_DEBUG, default=False): cv.boolean
+        cv.Optional(CONF_DEBUG, default=False): cv.boolean,
+        cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA)
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
@@ -99,3 +126,32 @@ async def to_code(config):
             )
     else:
         cg.add(var.gw().setSendAcknowledge(0))
+
+
+    def xor8(data: bytes) -> int:
+        chksum = reduce(xor, data)
+        if chksum == 0x5C:
+            chksum = 0xC5
+        return chksum
+
+
+    def generate_request(command: int, data: list[int]) -> list[int]:
+        packet = [
+            0xC0,
+            command,
+            len(data),
+            *data
+        ]
+        packet.append(xor8(packet))
+        return packet
+
+    for request in config[CONF_CONSTANTS]:
+        data = generate_request(
+            request.get(CONF_COMMAND, request[CONF_TOKEN]).enum_value,
+            request[CONF_DATA]
+        )
+        cg.add(var.set_const_request(
+            request[CONF_ADDRESS],
+            request[CONF_TOKEN],
+            data
+        ))

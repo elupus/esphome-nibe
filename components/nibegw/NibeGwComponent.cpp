@@ -23,7 +23,7 @@ void NibeGwComponent::callback_msg_received(const byte* const data, int len)
     }
 }
 
-void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte command)
+void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte token)
 {
     int size = udp.parsePacket();
     if (size == 0) {
@@ -43,10 +43,16 @@ void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte comma
     }
 
     request_data_type request;
-    request.reserve(size);
-    size = udp.read(&request.front(), size);
     request.resize(size);
-    requests_[request_key_type(address, command)].push(std::move(request));
+    udp.read(&request[0], size);
+    add_queued_request(address, token, std::move(request));
+}
+
+static int copy_request(const request_data_type& request, byte* data)
+{
+    auto len = std::min(request.size(), (size_t)MAX_DATA_LEN);
+    std::copy_n(request.begin(), len, data);
+    return len;
 }
 
 int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
@@ -54,40 +60,24 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
 
     request_key_type key {data[2], static_cast<byte>(token)};
 
-    const auto& it = requests_.find(key);
-    if (it != requests_.end()) {
-        auto& queue = it->second;
-        if (!queue.empty()) {
-            auto request = std::move(queue.front());
-            queue.pop();
-            auto len = std::min(request.size(), (size_t)MAX_DATA_LEN);
-            std::copy_n(request.begin(), len, data);
-            return len;
+    {
+        const auto& it = requests_.find(key);
+        if (it != requests_.end()) {
+            auto& queue = it->second;
+            if (!queue.empty()) {
+                auto len = copy_request(queue.front(), data);
+                queue.pop();
+                ESP_LOGD(TAG, "Response to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key), len);
+                return len;
+            }
         }
     }
 
-    // Try to match nibepi dummy data on some of these fields.
-    if (data[2] == 0x19 || data[2] == 0x1A || data[2] == 0x1B || data[2] == 0x1C)
     {
-        if (token == ACCESSORY_TOKEN) {
-            data[0] = 0xC0;
-            data[1] = ACCESSORY_TOKEN;
-            data[2] = 0x03;
-            data[3] = 0xEE; // RMU ?, MODBUS version low
-            data[4] = 0x03; // RMU version low, MODBUS version high
-            data[5] = 0x01; // RMU version high, MODBUS address?
-            data[6] = 0xC1;
-            return 7;
-        }
-
-        if (token == RMU_DATA_TOKEN) {
-            data[0] = 0xC0;
-            data[1] = RMU_WRITE_TOKEN;
-            data[2] = 0x02;
-            data[3] = 0x63;
-            data[4] = 0x00;
-            data[5] = 0xC1;
-            return 6;
+        const auto& it = requests_const_.find(key);
+        if (it != requests_const_.end()) {
+            ESP_LOGD(TAG, "Constant to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key), it->second.size());
+            return copy_request(it->second, data);
         }
     }
 
