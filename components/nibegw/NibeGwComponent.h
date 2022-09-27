@@ -19,7 +19,7 @@ typedef std::tuple<byte, byte>  request_key_type;
 typedef std::vector<byte>       request_data_type;
 
 class NibeGwComponent: public Component {
-    float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
+    float get_setup_priority() const override { return setup_priority::BEFORE_CONNECTION; }
     const char* TAG = "nibegw";
     const int requests_queue_max = 3;
     int udp_read_port_  = 9999;
@@ -27,6 +27,7 @@ class NibeGwComponent: public Component {
     int udp_target_port_;
     IPAddress udp_target_ip_;
     std::set<IPAddress> udp_source_ip_;
+    bool is_connected_;
 
     std::map<request_key_type, std::queue<request_data_type>> requests_; 
     std::map<request_key_type, request_data_type>             requests_const_; 
@@ -63,6 +64,8 @@ class NibeGwComponent: public Component {
         }
         queue.push(std::move(request));
     }
+
+    bool is_connected() {return is_connected_;}
 
     NibeGw& gw() { return *gw_; }
 

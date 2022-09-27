@@ -14,6 +14,10 @@ NibeGwComponent::NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pi
 
 void NibeGwComponent::callback_msg_received(const byte* const data, int len)
 {
+    if (!is_connected_) {
+        return;
+    }
+
     udp_read_.beginPacket(udp_target_ip_, udp_target_port_);
     udp_read_.write(data, len);
     if (udp_read_.endPacket()) {
@@ -25,6 +29,10 @@ void NibeGwComponent::callback_msg_received(const byte* const data, int len)
 
 void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte token)
 {
+    if (!is_connected_) {
+        return;
+    }
+
     int size = udp.parsePacket();
     if (size == 0) {
         return;
@@ -96,12 +104,24 @@ void NibeGwComponent::callback_debug(byte verbose, char* data)
 void NibeGwComponent::setup() {
     ESP_LOGCONFIG(TAG, "Starting up sending to: %s:%d", udp_target_ip_.toString().c_str(), udp_target_port_);
     gw_->connect();
-    udp_read_.begin(udp_read_port_);
-    udp_write_.begin(udp_write_port_);
 }
 
 void NibeGwComponent::loop()
 {
+    if (network::is_connected() && !is_connected_) {
+        ESP_LOGI(TAG, "Connecting network ports.");
+        udp_read_.begin(udp_read_port_);
+        udp_write_.begin(udp_write_port_);
+        is_connected_ = true;
+    }
+
+    if (!network::is_connected() && is_connected_) {
+        ESP_LOGI(TAG, "Disconnecting network ports.");
+        udp_read_.stop();
+        udp_write_.stop();
+        is_connected_ = false;
+    }
+
     token_request_cache(udp_read_, MODBUS40, READ_TOKEN);
     token_request_cache(udp_write_, MODBUS40, WRITE_TOKEN);
     do {
