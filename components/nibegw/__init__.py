@@ -75,7 +75,7 @@ UDP_SCHEMA = cv.Schema(
         cv.Optional(CONF_TARGET_PORT, default=9999): cv.port,
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
-        cv.Optional(CONF_SOURCE_IP): cv.ensure_list(cv.ipv4)
+        cv.Optional(CONF_SOURCE_IP, []): cv.ensure_list(cv.ipv4)
     }
 )
 
