@@ -27,7 +27,7 @@ class NibeGwComponent: public Component {
     int udp_target_port_;
     IPAddress udp_target_ip_;
     std::set<IPAddress> udp_source_ip_;
-    bool is_connected_;
+    bool is_connected_ = false;
 
     std::map<request_key_type, std::queue<request_data_type>> requests_; 
     std::map<request_key_type, request_data_type>             requests_const_; 
@@ -72,6 +72,6 @@ class NibeGwComponent: public Component {
     NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pin);
 
     void setup();
-
+    void dump_config();
     void loop();
 };

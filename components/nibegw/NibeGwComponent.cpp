@@ -10,6 +10,8 @@ NibeGwComponent::NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pi
     gw_->setDebugCallback(std::bind(&NibeGwComponent::callback_debug_wrapper, this, std::placeholders::_1, std::placeholders::_2);
 #endif
     gw_->setVerboseLevel(1);
+
+
 }
 
 void NibeGwComponent::callback_msg_received(const byte* const data, int len)
@@ -102,8 +104,18 @@ void NibeGwComponent::callback_debug(byte verbose, char* data)
 }
 
 void NibeGwComponent::setup() {
-    ESP_LOGCONFIG(TAG, "Starting up sending to: %s:%d", udp_target_ip_.toString().c_str(), udp_target_port_);
+    ESP_LOGI(TAG, "Starting up");
     gw_->connect();
+}
+
+void NibeGwComponent::dump_config() {
+    ESP_LOGCONFIG(TAG, "NibeGw");
+    ESP_LOGCONFIG(TAG, " Target: %s:%d", udp_target_ip_.toString().c_str(), udp_target_port_);
+    ESP_LOGCONFIG(TAG, " Read Port: %d", udp_read_port_);
+    ESP_LOGCONFIG(TAG, " Write Port: %d", udp_write_port_);
+    for (auto address = udp_source_ip_.begin(); address != udp_source_ip_.end(); address++) {
+        ESP_LOGCONFIG(TAG, "Source: %s", address->toString().c_str());
+    }
 }
 
 void NibeGwComponent::loop()
