@@ -18,8 +18,9 @@ DEPENDENCIES = ["logger"]
 NibeGwComponent = cg.global_ns.class_("NibeGwComponent", cg.Component)
 
 CONF_DIR_PIN = "dir_pin"
-CONF_TARGET_PORT = "target_port"
-CONF_TARGET_IP = "target_ip"
+CONF_TARGET = "target"
+CONF_TARGET_PORT = "port"
+CONF_TARGET_IP = "ip"
 CONF_ACKNOWLEDGE = "acknowledge"
 CONF_UDP = "udp"
 
@@ -28,7 +29,7 @@ CONF_ACKNOWLEDGE_RMU40 = "rmu40"
 CONF_ACKNOWLEDGE_SMS40 = "sms40"
 CONF_READ_PORT = "read_port"
 CONF_WRITE_PORT = "write_port"
-CONF_SOURCE_IP = "source_ip"
+CONF_SOURCE = "source"
 CONF_ADDRESS = "address"
 CONF_TOKEN = "token"
 CONF_COMMAND = "command"
@@ -69,13 +70,19 @@ CONSTANTS_SCHEMA = cv.Schema(
     }
 )
 
-UDP_SCHEMA = cv.Schema(
+TARGET_SCHEMA = cv.Schema(
     {
         cv.Required(CONF_TARGET_IP): cv.ipv4,
         cv.Optional(CONF_TARGET_PORT, default=9999): cv.port,
+    }
+)
+
+UDP_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_TARGET, []): cv.ensure_list(TARGET_SCHEMA),
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
-        cv.Optional(CONF_SOURCE_IP, []): cv.ensure_list(cv.ipv4)
+        cv.Optional(CONF_SOURCE, []): cv.ensure_list(cv.ipv4)
     }
 )
 
@@ -111,11 +118,11 @@ async def to_code(config):
     cg.add_library("WiFiUdp", None)
 
     if udp := config.get(CONF_UDP):
-        cg.add(var.set_target_ip(str(udp[CONF_TARGET_IP])))
-        cg.add(var.set_target_port(udp[CONF_TARGET_PORT]))
+        for target in udp[CONF_TARGET]:
+            cg.add(var.add_target(str(target[CONF_TARGET_IP]), target[CONF_TARGET_PORT]))
         cg.add(var.set_read_port(udp[CONF_READ_PORT]))
         cg.add(var.set_write_port(udp[CONF_WRITE_PORT]))
-        for source in udp[CONF_SOURCE_IP]:
+        for source in udp[CONF_SOURCE]:
             cg.add(var.add_source_ip(str(source)))
 
     if config[CONF_ACKNOWLEDGE]:

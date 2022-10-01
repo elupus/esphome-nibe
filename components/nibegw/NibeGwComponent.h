@@ -17,6 +17,7 @@ using namespace esphome;
 
 typedef std::tuple<byte, byte>  request_key_type;
 typedef std::vector<byte>       request_data_type;
+typedef std::tuple<IPAddress, int> target_type;
 
 class NibeGwComponent: public Component {
     float get_setup_priority() const override { return setup_priority::BEFORE_CONNECTION; }
@@ -29,6 +30,7 @@ class NibeGwComponent: public Component {
     std::set<IPAddress> udp_source_ip_;
     bool is_connected_ = false;
 
+    std::vector<target_type> udp_targets_;
     std::map<request_key_type, std::queue<request_data_type>> requests_; 
     std::map<request_key_type, request_data_type>             requests_const_; 
 
@@ -45,10 +47,15 @@ class NibeGwComponent: public Component {
 
     public:
 
-    void set_target_port(int port) { udp_target_port_ = port; };
     void set_read_port(int port) { udp_read_port_ = port; };
     void set_write_port(int port) { udp_write_port_ = port; };
-    void set_target_ip(std::string ip) { udp_target_ip_.fromString(ip.c_str()); };
+
+    void add_target(std::string ip, int port)
+    {
+        auto target = target_type(IPAddress().fromString(ip.c_str()), port);
+        udp_targets_.push_back(target);
+    }
+
     void add_source_ip(std::string ip) { udp_source_ip_.insert(IPAddress().fromString(ip.c_str())); };
 
     void set_const_request(int address, int token, request_data_type request)

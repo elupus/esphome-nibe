@@ -20,12 +20,16 @@ void NibeGwComponent::callback_msg_received(const byte* const data, int len)
         return;
     }
 
-    udp_read_.beginPacket(udp_target_ip_, udp_target_port_);
-    udp_read_.write(data, len);
-    if (udp_read_.endPacket()) {
-        ESP_LOGD(TAG, "UDP Packet send succeeded with %d bytes", len);
-    } else {
-        ESP_LOGW(TAG, "UDP Packet send failed");
+    ESP_LOGD(TAG, "UDP Packet with %d bytes to send", len);
+    for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++)
+    {
+        udp_read_.beginPacket(std::get<0>(*target), std::get<1>(*target));
+        udp_read_.write(data, len);
+        if (!udp_read_.endPacket()) {
+            ESP_LOGW(TAG, "UDP Packet send failed to %s:%d",
+                          std::get<0>(*target).toString().c_str(),
+                          std::get<1>(*target));
+        }
     }
 }
 

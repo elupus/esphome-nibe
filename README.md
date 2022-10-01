@@ -26,11 +26,13 @@ nibegw:
   tx_pin: GPIO17
   uart_id: 1
   udp:
-    # The target address to send data to. May be a multicast address.
-    target_ip: 192.168.16.130
+    # The target address(s) to send data to. May be a multicast address.
+    target:
+      - ip: 192.168.16.130
+        port: 10090
 
     # List of source address to accept data from, may be empty for no filter
-    source_ip:
+    source:
       - 192.168.16.130
 
   acknowledge:
