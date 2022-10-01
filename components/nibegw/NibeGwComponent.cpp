@@ -54,8 +54,8 @@ void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte token
         return;
     }
 
-    if (udp_source_ip_.size() && udp_source_ip_.count(udp.remoteIP()) != 0) {
-        ESP_LOGW(TAG, "UDP Packet wrong wrong ip ignored");
+    if (udp_source_ip_.size() && udp_source_ip_.count(udp.remoteIP()) == 0) {
+        ESP_LOGW(TAG, "UDP Packet wrong ip ignored %s", udp.remoteIP().toString().c_str());
         return;
     }
 

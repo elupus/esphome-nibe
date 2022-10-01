@@ -76,8 +76,6 @@ class NibeGwComponent: public Component {
         queue.push(std::move(request));
     }
 
-    bool is_connected() {return is_connected_;}
-
     NibeGw& gw() { return *gw_; }
 
     NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pin);
