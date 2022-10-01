@@ -23,7 +23,10 @@ void NibeGwComponent::callback_msg_received(const byte* const data, int len)
     ESP_LOGD(TAG, "UDP Packet with %d bytes to send", len);
     for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++)
     {
-        udp_read_.beginPacket(std::get<0>(*target), std::get<1>(*target));
+        udp_read_.beginPacket(
+            std::get<0>(*target),
+            std::get<1>(*target)
+        );
         udp_read_.write(data, len);
         if (!udp_read_.endPacket()) {
             ESP_LOGW(TAG, "UDP Packet send failed to %s:%d",
@@ -114,12 +117,19 @@ void NibeGwComponent::setup() {
 
 void NibeGwComponent::dump_config() {
     ESP_LOGCONFIG(TAG, "NibeGw");
-    ESP_LOGCONFIG(TAG, " Target: %s:%d", udp_target_ip_.toString().c_str(), udp_target_port_);
+    for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++)
+    {
+        ESP_LOGCONFIG(TAG, " Target: %s:%d",
+                           std::get<0>(*target).toString().c_str(),
+                           std::get<1>(*target)
+        );
+    }
+    for (auto address = udp_source_ip_.begin(); address != udp_source_ip_.end(); address++) {
+        ESP_LOGCONFIG(TAG, " Source: %s",
+                           address->toString().c_str());
+    }
     ESP_LOGCONFIG(TAG, " Read Port: %d", udp_read_port_);
     ESP_LOGCONFIG(TAG, " Write Port: %d", udp_write_port_);
-    for (auto address = udp_source_ip_.begin(); address != udp_source_ip_.end(); address++) {
-        ESP_LOGCONFIG(TAG, "Source: %s", address->toString().c_str());
-    }
 }
 
 void NibeGwComponent::loop()

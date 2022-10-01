@@ -25,8 +25,6 @@ class NibeGwComponent: public Component {
     const int requests_queue_max = 3;
     int udp_read_port_  = 9999;
     int udp_write_port_ = 10000;
-    int udp_target_port_;
-    IPAddress udp_target_ip_;
     std::set<IPAddress> udp_source_ip_;
     bool is_connected_ = false;
 
@@ -52,11 +50,17 @@ class NibeGwComponent: public Component {
 
     void add_target(std::string ip, int port)
     {
-        auto target = target_type(IPAddress().fromString(ip.c_str()), port);
+        IPAddress address;
+        address.fromString(ip.c_str());
+        auto target = target_type(address, port);
         udp_targets_.push_back(target);
     }
 
-    void add_source_ip(std::string ip) { udp_source_ip_.insert(IPAddress().fromString(ip.c_str())); };
+    void add_source_ip(std::string ip){
+        IPAddress address;
+        address.fromString(ip.c_str());
+        udp_source_ip_.insert(address);
+    };
 
     void set_const_request(int address, int token, request_data_type request)
     {
