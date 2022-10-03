@@ -1,5 +1,7 @@
 #include "NibeGwComponent.h"
 
+static const char *TAG = "nibegw";
+
 NibeGwComponent::NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pin)
 {
     HardwareSerial* serial = new HardwareSerial(uart_no);
@@ -112,6 +114,7 @@ void NibeGwComponent::callback_debug(byte verbose, char* data)
 
 void NibeGwComponent::setup() {
     ESP_LOGI(TAG, "Starting up");
+    
     gw_->connect();
 }
 
@@ -128,12 +131,15 @@ void NibeGwComponent::dump_config() {
         ESP_LOGCONFIG(TAG, " Source: %s",
                            address->toString().c_str());
     }
-    ESP_LOGCONFIG(TAG, " Read Port: %d", udp_read_port_);
+    ESP_LOGCONFIG(
+        , " Read Port: %d", udp_read_port_);
     ESP_LOGCONFIG(TAG, " Write Port: %d", udp_write_port_);
 }
 
 void NibeGwComponent::loop()
 {
+    ESP_LOGI(TAG, "loop")
+    ESP_LOGI("nibegwcustom", "loop")
     if (network::is_connected() && !is_connected_) {
         ESP_LOGI(TAG, "Connecting network ports.");
         udp_read_.begin(udp_read_port_);
