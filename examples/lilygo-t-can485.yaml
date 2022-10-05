@@ -1,0 +1,75 @@
+esphome:
+  name: nibegw
+  comment: Nibegw
+  platform: ESP32
+  board: esp32dev
+  platformio_options:
+    board_build.partitions: huge_app.csv # Required to set partition sizes
+
+# General ESPHome setup
+api:
+
+ota:
+  password: !secret OTA_PASSWORD
+
+wifi:
+  ssid: !secret WIFI_SSID
+  password: !secret WIFI_PASSWORD
+  fast_connect: true # Fast connect to connect to my hidden network
+
+# Load nibe component
+external_components:
+  - source: github://elupus/esphome-nibe
+
+# Set pins required for LilyGo T-CAN485 board
+output:
+  - platform: gpio
+    id: ENABLE_PIN # Enable the chip
+    pin:
+      number: GPIO19
+      inverted: true
+  - platform: gpio
+    id: SE_PIN # Enable autodirection
+    pin:
+      number: GPIO17
+      inverted: true
+  - platform: gpio
+    id: ENABLE_5V_PIN # Enable 5V pin for RS485 chip
+    pin:
+      number: GPIO16
+      inverted: true
+
+# Configure NibeGW
+nibegw:
+  dir_pin: GPIO25
+  rx_pin: GPIO21
+  tx_pin: GPIO22
+  udp:
+    # The target address(s) to send data to. May be a multicast address.
+    target:
+      - ip: 192.168.255.254
+        port: 10090
+
+    # List of source address to accept data from, may be empty for no filter
+    source:
+      - 192.168.255.254
+
+  acknowledge:
+    - MODBUS40
+
+  # Constant replies to certain requests cabe made
+  constants:
+    - address: MODBUS40
+      token: ACCESSORY
+      data: [
+            0x0A, # MODBUS version low
+            0x00, # MODBUS version high
+            0x01, # MODBUS address?
+      ]
+
+# Some helper functions to restart ESPHome from HA
+button:
+- platform: restart
+  name: Nibegw Restart
+- platform: safe_mode
+  name: Nibegw Safe Mode Boot
