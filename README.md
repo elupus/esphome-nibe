@@ -12,6 +12,9 @@ A telegram from the heat pump must be acknowledged, otherwise the heat pump will
 
 You will need an esp32 with some type of RS485 converter hooked up to a UART. It can either be a MAX485 based chip or a chip with automatic flow control like a MAX3485. If using an automatic flow controlling chip, set the `dir_pin` to an unused GPIO pin on your board.
 
+An example of such a board is the [LilyGo T-CAN485](https://github.com/Xinyuan-LilyGO/T-CAN485), this board has an integrated RS485 connection that is verified to work with this setup. An example setup can be found in the [examples](./examples) folder.
+
+
 ### Configuration example
 
 Add the following to a ESPHome configuration to enable the udp gateway feature to the device.
