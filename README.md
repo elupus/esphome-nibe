@@ -60,6 +60,7 @@ nibegw:
 Currently no actual parsing of the payload is performed on the ESPHome device, this must be handled by external application.
 
 * [Home Assistant](https://www.home-assistant.io/integrations/nibe_heatpump)
+* [OpenHab](https://www.openhab.org/addons/bindings/nibeheatpump)
 * [Nibe MQTT](https://github.com/yozik04/nibe-mqtt)
 * [nibepi](https://github.com/anerdins/nibepi)
 
