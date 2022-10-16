@@ -3,8 +3,6 @@ esphome:
   comment: Nibegw
   platform: ESP32
   board: esp32dev
-  platformio_options:
-    board_build.partitions: huge_app.csv # Required to set partition sizes
 
 # General ESPHome setup
 api:
