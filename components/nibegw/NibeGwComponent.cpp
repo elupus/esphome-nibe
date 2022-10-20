@@ -31,13 +31,13 @@ void NibeGwComponent::callback_msg_received(const byte* const data, int len)
     for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++)
     {
         udp_read_.beginPacket(
-            std::get<0>(*target),
+            (uint32_t)std::get<0>(*target),
             std::get<1>(*target)
         );
         udp_read_.write(data, len);
         if (!udp_read_.endPacket()) {
             ESP_LOGW(TAG, "UDP Packet send failed to %s:%d",
-                          std::get<0>(*target).toString().c_str(),
+                          std::get<0>(*target).str().c_str(),
                           std::get<1>(*target));
         }
     }
@@ -61,8 +61,9 @@ void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte token
         return;
     }
 
-    if (udp_source_ip_.size() && udp_source_ip_.count(udp.remoteIP()) == 0) {
-        ESP_LOGW(TAG, "UDP Packet wrong ip ignored %s", udp.remoteIP().toString().c_str());
+    network::IPAddress ip = (uint32_t)udp.remoteIP();
+    if (udp_source_ip_.size() && udp_source_ip_.count(ip) == 0) {
+        ESP_LOGW(TAG, "UDP Packet wrong ip ignored %s", ip.str().c_str());
         return;
     }
 
@@ -127,13 +128,13 @@ void NibeGwComponent::dump_config() {
     for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++)
     {
         ESP_LOGCONFIG(TAG, " Target: %s:%d",
-                           std::get<0>(*target).toString().c_str(),
+                           std::get<0>(*target).str().c_str(),
                            std::get<1>(*target)
         );
     }
     for (auto address = udp_source_ip_.begin(); address != udp_source_ip_.end(); address++) {
         ESP_LOGCONFIG(TAG, " Source: %s",
-                           address->toString().c_str());
+                           address->str().c_str());
     }
     ESP_LOGCONFIG(TAG, " Read Port: %d", udp_read_port_);
     ESP_LOGCONFIG(TAG, " Write Port: %d", udp_write_port_);

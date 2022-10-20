@@ -17,7 +17,7 @@ using namespace esphome;
 
 typedef std::tuple<byte, byte>  request_key_type;
 typedef std::vector<byte>       request_data_type;
-typedef std::tuple<IPAddress, int> target_type;
+typedef std::tuple<network::IPAddress, int> target_type;
 
 class NibeGwComponent: public Component {
     float get_setup_priority() const override { return setup_priority::BEFORE_CONNECTION; }
@@ -25,7 +25,7 @@ class NibeGwComponent: public Component {
     const int requests_queue_max = 3;
     int udp_read_port_  = 9999;
     int udp_write_port_ = 10000;
-    std::set<IPAddress> udp_source_ip_;
+    std::set<network::IPAddress> udp_source_ip_;
     bool is_connected_ = false;
 
     std::vector<target_type> udp_targets_;
@@ -48,18 +48,14 @@ class NibeGwComponent: public Component {
     void set_read_port(int port) { udp_read_port_ = port; };
     void set_write_port(int port) { udp_write_port_ = port; };
 
-    void add_target(std::string ip, int port)
+    void add_target(const network::IPAddress& ip, int port)
     {
-        IPAddress address;
-        address.fromString(ip.c_str());
-        auto target = target_type(address, port);
+        auto target = target_type(ip, port);
         udp_targets_.push_back(target);
     }
 
-    void add_source_ip(std::string ip){
-        IPAddress address;
-        address.fromString(ip.c_str());
-        udp_source_ip_.insert(address);
+    void add_source_ip(const network::IPAddress& ip){
+        udp_source_ip_.insert(ip);
     };
 
     void set_const_request(int address, int token, request_data_type request)
