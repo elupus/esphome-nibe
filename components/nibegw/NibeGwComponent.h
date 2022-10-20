@@ -10,7 +10,16 @@
 
 #include "NibeGw.h"
 #include <HardwareSerial.h>
+
+
+#ifdef USE_ESP32
+#include <WiFi.h>
+#endif
+
+#ifdef USE_ESP8266
+#include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
+#endif
 
 using namespace esphome;
 

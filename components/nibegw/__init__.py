@@ -122,9 +122,6 @@ async def to_code(config):
     if CORE.is_esp8266:
         cg.add_build_flag("-DHARDWARE_SERIAL")
 
-    cg.add_library("WiFi", None)
-    cg.add_library("WiFiUdp", None)
-
     if udp := config.get(CONF_UDP):
         for target in udp[CONF_TARGET]:
             cg.add(var.add_target(IPAddress(*target[CONF_TARGET_IP].args), target[CONF_TARGET_PORT]))
