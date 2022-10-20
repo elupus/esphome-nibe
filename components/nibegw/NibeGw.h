@@ -40,7 +40,7 @@
 #include <functional>
 #include <set>
 
-#define HARDWARE_SERIAL_WITH_PINS
+//#define HARDWARE_SERIAL_WITH_PINS
 //#define HARDWARE_SERIAL
 
 //#define ENABLE_NIBE_DEBUG

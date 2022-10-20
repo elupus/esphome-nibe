@@ -11,6 +11,7 @@ from esphome.const import (
     CONF_DEBUG,
 )
 from esphome import pins
+from esphome.core import CORE
 from enum import IntEnum, Enum
 
 DEPENDENCIES = ["logger"]
@@ -113,6 +114,12 @@ async def to_code(config):
 
     if config[CONF_DEBUG]:
         cg.add_build_flag("-DENABLE_NIBE_DEBUG")
+
+    if CORE.is_esp32:
+        cg.add_build_flag("-DHARDWARE_SERIAL_WITH_PINS")
+
+    if CORE.is_esp8266:
+        cg.add_build_flag("-DHARDWARE_SERIAL")
 
     cg.add_library("WiFi", None)
     cg.add_library("WiFiUdp", None)
