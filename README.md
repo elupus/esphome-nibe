@@ -19,6 +19,8 @@ An example of such a board is the [LilyGo T-CAN485](https://github.com/Xinyuan-L
 
 Add the following to a ESPHome configuration to enable the udp gateway feature to the device.
 
+Minimal Config
+
 ```yaml
 external_components:
   - source: 
@@ -32,17 +34,55 @@ nibegw:
   tx_pin: GPIO17
   uart_id: 1
   udp:
-    # The target address(s) to send data to. May be a multicast address.
     target:
       - ip: 192.168.16.130
-        port: 10090
 
-    # List of source address to accept data from, may be empty for no filter
     source:
       - 192.168.16.130
 
   acknowledge:
     - MODBUS40
+```
+
+Complete Config
+
+```yaml
+external_components:
+  - source: 
+      type: git
+      url: https://github.com/elupus/esphome-nibe.git
+    components: [ nibegw ]
+
+nibegw:
+  dir_pin: GPIO4
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  uart_id: 1
+  udp:
+    # The target address(s) to send data to. May also be multicast addresses.
+    target:
+      - ip: 192.168.16.130
+        port: 9999
+
+    # List of source address to accept read/write from, may be empty for no filter, but
+    # this is not recommended.
+    source:
+      - 192.168.16.130
+
+    # Optional port this device will listen to to receive read requests. Defaults to 9999
+    read_port: 9999
+
+    # Optional port this device will listen to to receive write request. Defaults to 10000
+    write_port: 10000
+
+
+  acknowledge:
+    - MODBUS40
+
+    # Enable a dummy RMU40 accessory to receive updates
+    # to certain registers faster. This should not be
+    # enabled if you have an actual RMU40.
+    - RMU40_4
 
   # Constant replies to certain requests can be made
   constants:
@@ -52,6 +92,33 @@ nibegw:
             0x0A, # MODBUS version low
             0x00, # MODBUS version high
             0x02, # MODBUS address?
+      ]
+
+    # Accessory version response
+    - address: RMU40_S4
+      token: ACCESSORY
+      data: [
+            0xEE, # RMU ?
+            0x03, # RMU version low
+            0x01, # RMU version high
+      ]
+
+    # Unknown response that nibepi uses
+    - address: RMU40_S4
+      token: RMU_DATA
+      command: RMU_WRITE
+      data: [
+            0x63,
+            0x00,
+      ]
+
+    # Constant fixed temperature to avoid pump going into alarm.
+    - address: RMU40_S4
+      token: RMU_WRITE
+      data: [
+            0x06, # Temperature
+            0x14, # degrees low
+            0x00, # degrees hight
       ]
 ```
 
