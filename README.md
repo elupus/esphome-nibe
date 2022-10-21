@@ -82,7 +82,7 @@ nibegw:
     # Enable a dummy RMU40 accessory to receive updates
     # to certain registers faster. This should not be
     # enabled if you have an actual RMU40.
-    - RMU40_4
+    - RMU40_S4
 
   # Constant replies to certain requests can be made
   constants:
