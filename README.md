@@ -34,7 +34,6 @@ uart:
   baud_rate: 9600
 
 nibegw:
-  dir_pin: GPIO4
   udp:
     target:
       - ip: 192.168.16.130
@@ -62,7 +61,9 @@ uart:
   baud_rate: 9600
 
 nibegw:
-  dir_pin: GPIO4
+  dir_pin:
+    number: GPIO4
+    invert: false
 
   # If you have a named uart instance, you can specify this here.
   uart_id: my_uart

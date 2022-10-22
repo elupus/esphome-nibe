@@ -17,9 +17,10 @@
  */
 
 #include "NibeGw.h"
+#include "esphome/core/gpio.h"
 #include "esphome/components/uart/uart.h"
 
-NibeGw::NibeGw(esphome::uart::UARTDevice* serial, int RS485DirectionPin)
+NibeGw::NibeGw(esphome::uart::UARTDevice* serial, esphome::GPIOPin* RS485DirectionPin)
 {
   verbose = 0;
   sendAcknowledge = true;
@@ -27,8 +28,6 @@ NibeGw::NibeGw(esphome::uart::UARTDevice* serial, int RS485DirectionPin)
   connectionState = false;
   RS485 = serial;
   directionPin = RS485DirectionPin;
-  pinMode(directionPin, OUTPUT);
-  digitalWrite(directionPin, LOW);
   setCallback(NULL, NULL);
 }
 
@@ -301,12 +300,13 @@ void NibeGw::sendData(const byte* const data, byte len)
   }
 #endif
 
-  digitalWrite(directionPin, HIGH);
-  delay(1);
+  if(directionPin)
+    directionPin->digital_write(true);
   RS485->write_array(data, len);
   RS485->flush();
   delay(1);
-  digitalWrite(directionPin, LOW);
+  if(directionPin)
+    directionPin->digital_write(false);
 }
 
 void NibeGw::sendAck()
@@ -316,12 +316,14 @@ void NibeGw::sendAck()
     debug(1, "Send ACK\n");
 #endif
 
-  digitalWrite(directionPin, HIGH);
+  if(directionPin)
+    directionPin->digital_write(true);
   delay(1);
   RS485->write_byte(0x06);
   RS485->flush();
   delay(1);
-  digitalWrite(directionPin, LOW);
+  if(directionPin)
+    directionPin->digital_write(false);
 }
 
 void NibeGw::sendNak()
@@ -331,12 +333,14 @@ void NibeGw::sendNak()
     debug(1, "Send NACK\n");
 #endif
 
-  digitalWrite(directionPin, HIGH);
+  if(directionPin)
+    directionPin->digital_write(true);
   delay(1);
   RS485->write(0x15);
   RS485->flush();
   delay(1);
-  digitalWrite(directionPin, LOW);
+  if(directionPin)
+    directionPin->digital_write(false);
 }
 
 boolean NibeGw::shouldAckNakSend(byte address)

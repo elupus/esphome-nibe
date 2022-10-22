@@ -92,7 +92,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.GenerateID(): cv.declare_id(NibeGwComponent),
         cv.Optional(CONF_ACKNOWLEDGE, default=[]): [cv.Any(addresses_string, cv.Coerce(int))],
         cv.Required(CONF_UDP): UDP_SCHEMA,
-        cv.Optional(CONF_DIR_PIN): pins.internal_gpio_output_pin_number,
+        cv.Optional(CONF_DIR_PIN): pins.gpio_output_pin_schema,
         cv.Optional(CONF_DEBUG, default=False): cv.boolean,
         cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA)
     }
@@ -100,9 +100,14 @@ CONFIG_SCHEMA = cv.Schema(
 
 
 async def to_code(config):
+    if dir_pin := config.get(CONF_DIR_PIN):
+        dir_pin_data = await cg.gpio_pin_expression(dir_pin)
+    else:
+        dir_pin_data = 0
+
     var = cg.new_Pvariable(
         config[CONF_ID],
-        config[CONF_DIR_PIN],
+        dir_pin_data,
     )
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)

@@ -38,6 +38,7 @@
 
 #include <Arduino.h>
 #include "esphome/components/uart/uart.h"
+#include "esphome/core/gpio.h"
 #include <functional>
 #include <set>
 
@@ -83,7 +84,7 @@ class NibeGw
   private:
     eState state;
     boolean connectionState;
-    byte directionPin;
+    esphome::GPIOPin* directionPin;
     byte buffer[MAX_DATA_LEN];
     byte index;
     esphome::uart::UARTDevice* RS485;
@@ -105,7 +106,7 @@ class NibeGw
     #endif
 
   public:
-    NibeGw(esphome::uart::UARTDevice* serial, int RS485DirectionPin);
+    NibeGw(esphome::uart::UARTDevice* serial, esphome::GPIOPin* RS485DirectionPin);
     NibeGw& setCallback(callback_msg_received_type callback_msg_received, callback_msg_token_received_type callback_msg_token_received);
 
     #ifdef ENABLE_NIBE_DEBUG

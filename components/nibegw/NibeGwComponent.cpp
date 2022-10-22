@@ -1,6 +1,8 @@
 #include "NibeGwComponent.h"
 
-NibeGwComponent::NibeGwComponent(int dir_pin)
+using namespace esphome;
+
+NibeGwComponent::NibeGwComponent(esphome::GPIOPin* dir_pin)
 {
     gw_ = new NibeGw(this, dir_pin);
     gw_->setCallback(std::bind(&NibeGwComponent::callback_msg_received, this, std::placeholders::_1, std::placeholders::_2),
