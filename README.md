@@ -10,7 +10,7 @@ A telegram from the heat pump must be acknowledged, otherwise the heat pump will
 
 ## Setup
 
-You will need an esp32 with some type of RS485 converter hooked up to a UART. It can either be a MAX485 based chip or a chip with automatic flow control like a MAX3485. If using an automatic flow controlling chip, set the `dir_pin` to an unused GPIO pin on your board.
+You will need an esp32 with some type of RS485 converter hooked up to a UART. It can either be a MAX485 based chip or a chip with automatic flow control like a MAX3485. If using an automatic flow controlling chip, don't set the `dir_pin`.
 
 An example of such a board is the [LilyGo T-CAN485](https://github.com/Xinyuan-LilyGO/T-CAN485), this board has an integrated RS485 connection that is verified to work with this setup. An example setup can be found in the [examples](./examples) folder.
 
@@ -28,11 +28,12 @@ external_components:
       url: https://github.com/elupus/esphome-nibe.git
     components: [ nibegw ]
 
-nibegw:
-  dir_pin: GPIO4
+uart:
   rx_pin: GPIO16
   tx_pin: GPIO17
-  uart_id: 1
+  baud_rate: 9600
+
+nibegw:
   udp:
     target:
       - ip: 192.168.16.130
@@ -53,11 +54,20 @@ external_components:
       url: https://github.com/elupus/esphome-nibe.git
     components: [ nibegw ]
 
-nibegw:
-  dir_pin: GPIO4
+uart:
+  id: my_uart
   rx_pin: GPIO16
   tx_pin: GPIO17
-  uart_id: 1
+  baud_rate: 9600
+
+nibegw:
+  dir_pin:
+    number: GPIO4
+    invert: false
+
+  # If you have a named uart instance, you can specify this here.
+  uart_id: my_uart
+
   udp:
     # The target address(s) to send data to. May also be multicast addresses.
     target:

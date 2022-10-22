@@ -37,11 +37,13 @@ output:
       number: GPIO16
       inverted: true
 
-# Configure NibeGW
-nibegw:
-  dir_pin: GPIO25
+# Configure uart that will be used
+uart:
   rx_pin: GPIO21
   tx_pin: GPIO22
+
+# Configure NibeGW
+nibegw:
   udp:
     # The target address(s) to send data to. May be a multicast address.
     target:
