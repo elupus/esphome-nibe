@@ -36,7 +36,7 @@ CONF_TOKEN = "token"
 CONF_COMMAND = "command"
 CONF_DATA = "data"
 CONF_CONSTANTS = "constants"
-
+CONF_RMU = "rmu"
 class Addresses(IntEnum):
     MODBUS40 = 0x20
     SMS40 = 0x16
@@ -87,6 +87,17 @@ UDP_SCHEMA = cv.Schema(
     }
 )
 
+RMU_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_ADDRESS): cv.enum({
+            Addresses.RMU40_S1.name: Addresses.RMU40_S1.value,
+            Addresses.RMU40_S2.name: Addresses.RMU40_S2.value,
+            Addresses.RMU40_S3.name: Addresses.RMU40_S3.value,
+            Addresses.RMU40_S4.name: Addresses.RMU40_S4.value,
+        }),
+    }
+)
+
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(NibeGwComponent),
@@ -94,7 +105,8 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required(CONF_UDP): UDP_SCHEMA,
         cv.Optional(CONF_DIR_PIN): pins.gpio_output_pin_schema,
         cv.Optional(CONF_DEBUG, default=False): cv.boolean,
-        cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA)
+        cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA),
+        cv.Optional(CONF_RMU): cv.ensure_list(CONF_RMU)
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
