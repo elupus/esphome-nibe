@@ -5,19 +5,18 @@ import esphome.config_validation as cv
 import esphome.codegen as cg
 from esphome.const import (
     CONF_ID,
-    CONF_RX_PIN,
-    CONF_TX_PIN,
-    CONF_UART_ID,
     CONF_DEBUG,
 )
 from esphome import pins
 from esphome.core import CORE
 from esphome.components.network import IPAddress
 from enum import IntEnum, Enum
+from esphome.components import uart
+
 
 DEPENDENCIES = ["logger"]
 
-NibeGwComponent = cg.global_ns.class_("NibeGwComponent", cg.Component)
+NibeGwComponent = cg.global_ns.class_("NibeGwComponent", cg.Component, uart.UARTDevice)
 
 CONF_DIR_PIN = "dir_pin"
 CONF_TARGET = "target"
@@ -93,25 +92,20 @@ CONFIG_SCHEMA = cv.Schema(
         cv.GenerateID(): cv.declare_id(NibeGwComponent),
         cv.Optional(CONF_ACKNOWLEDGE, default=[]): [cv.Any(addresses_string, cv.Coerce(int))],
         cv.Required(CONF_UDP): UDP_SCHEMA,
-        cv.Optional(CONF_RX_PIN): pins.internal_gpio_input_pin_number,
-        cv.Optional(CONF_TX_PIN): pins.internal_gpio_output_pin_number,
         cv.Optional(CONF_DIR_PIN): pins.internal_gpio_output_pin_number,
-        cv.Optional(CONF_UART_ID, default=2): int,
         cv.Optional(CONF_DEBUG, default=False): cv.boolean,
         cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA)
     }
-).extend(cv.COMPONENT_SCHEMA)
+).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
 
 async def to_code(config):
     var = cg.new_Pvariable(
         config[CONF_ID],
-        config[CONF_UART_ID],
         config[CONF_DIR_PIN],
-        config[CONF_RX_PIN],
-        config[CONF_TX_PIN],
     )
     await cg.register_component(var, config)
+    await uart.register_uart_device(var, config)
 
     if config[CONF_DEBUG]:
         cg.add_build_flag("-DENABLE_NIBE_DEBUG")

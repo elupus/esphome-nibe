@@ -7,9 +7,9 @@
 
 #include "esphome.h"
 #include "esphome/core/component.h"
+#include "esphome/components/uart/uart.h"
 
 #include "NibeGw.h"
-#include <HardwareSerial.h>
 
 
 #ifdef USE_ESP32
@@ -28,7 +28,7 @@ typedef std::tuple<byte, byte>  request_key_type;
 typedef std::vector<byte>       request_data_type;
 typedef std::tuple<network::IPAddress, int> target_type;
 
-class NibeGwComponent: public Component {
+class NibeGwComponent: public Component, public uart::UARTDevice {
     float get_setup_priority() const override { return setup_priority::BEFORE_CONNECTION; }
     const char* TAG = "nibegw";
     const int requests_queue_max = 3;
@@ -83,7 +83,7 @@ class NibeGwComponent: public Component {
 
     NibeGw& gw() { return *gw_; }
 
-    NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pin);
+    NibeGwComponent(int dir_pin);
 
     void setup();
     void dump_config();

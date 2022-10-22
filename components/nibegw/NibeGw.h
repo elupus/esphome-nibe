@@ -37,6 +37,7 @@
 #define NibeGw_h
 
 #include <Arduino.h>
+#include "esphome/components/uart/uart.h"
 #include <functional>
 #include <set>
 
@@ -85,15 +86,7 @@ class NibeGw
     byte directionPin;
     byte buffer[MAX_DATA_LEN];
     byte index;
-    #if defined(HARDWARE_SERIAL_WITH_PINS)
-      HardwareSerial* RS485;
-      int RS485RxPin;
-      int RS485TxPin;
-    #elif defined(HARDWARE_SERIAL)
-      HardwareSerial* RS485;
-    #else
-      Serial_* RS485;
-    #endif
+    esphome::uart::UARTDevice* RS485;
     callback_msg_received_type callback_msg_received;
     callback_msg_token_received_type callback_msg_token_received;
     byte verbose;
@@ -112,13 +105,7 @@ class NibeGw
     #endif
 
   public:
-    #if defined(HARDWARE_SERIAL_WITH_PINS)
-      NibeGw(HardwareSerial* serial, int RS485DirectionPin, int RS485RxPin, int RS485TxPin);
-    #elif defined(HARDWARE_SERIAL)
-      NibeGw(HardwareSerial* serial, int RS485DirectionPin);
-    #else
-      NibeGw(Serial_* serial, int RS485DirectionPin);
-    #endif
+    NibeGw(esphome::uart::UARTDevice* serial, int RS485DirectionPin);
     NibeGw& setCallback(callback_msg_received_type callback_msg_received, callback_msg_token_received_type callback_msg_token_received);
 
     #ifdef ENABLE_NIBE_DEBUG

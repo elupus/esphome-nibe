@@ -28,11 +28,13 @@ external_components:
       url: https://github.com/elupus/esphome-nibe.git
     components: [ nibegw ]
 
-nibegw:
-  dir_pin: GPIO4
+uart:
   rx_pin: GPIO16
   tx_pin: GPIO17
-  uart_id: 1
+  baud_rate: 9600
+
+nibegw:
+  dir_pin: GPIO4
   udp:
     target:
       - ip: 192.168.16.130
@@ -53,11 +55,18 @@ external_components:
       url: https://github.com/elupus/esphome-nibe.git
     components: [ nibegw ]
 
-nibegw:
-  dir_pin: GPIO4
+uart:
+  id: my_uart
   rx_pin: GPIO16
   tx_pin: GPIO17
-  uart_id: 1
+  baud_rate: 9600
+
+nibegw:
+  dir_pin: GPIO4
+
+  # If you have a named uart instance, you can specify this here.
+  uart_id: my_uart
+
   udp:
     # The target address(s) to send data to. May also be multicast addresses.
     target:

@@ -1,16 +1,8 @@
 #include "NibeGwComponent.h"
 
-NibeGwComponent::NibeGwComponent(int uart_no, int dir_pin, int rx_pin, int tx_pin)
+NibeGwComponent::NibeGwComponent(int dir_pin)
 {
-#if defined(HARDWARE_SERIAL_WITH_PINS)
-    HardwareSerial* serial = new HardwareSerial(uart_no);
-    gw_ = new NibeGw(serial, dir_pin, rx_pin, tx_pin);
-#elif defined(HARDWARE_SERIAL)
-    HardwareSerial* serial = new HardwareSerial(uart_no);
-    gw_ = new NibeGw(serial, dir_pin);
-#else
-    gw_ = new NibeGw(&Serial, dir_pin);
-#endif
+    gw_ = new NibeGw(this, dir_pin);
     gw_->setCallback(std::bind(&NibeGwComponent::callback_msg_received, this, std::placeholders::_1, std::placeholders::_2),
                      std::bind(&NibeGwComponent::callback_msg_token_received, this, std::placeholders::_1, std::placeholders::_2));
 #ifdef ENABLE_NIBE_DEBUG
