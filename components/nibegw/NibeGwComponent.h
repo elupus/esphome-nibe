@@ -9,6 +9,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
 #include "esphome/components/uart/uart.h"
+#include "esphome/components/number/number.h"
 
 #include "NibeGw.h"
 
@@ -22,20 +23,31 @@
 #include <WiFiUdp.h>
 #endif
 
-using namespace esphome;
 
 
 typedef std::tuple<byte, byte>  request_key_type;
 typedef std::vector<byte>       request_data_type;
-typedef std::tuple<network::IPAddress, int> target_type;
+typedef std::tuple<esphome::network::IPAddress, int> target_type;
+
+
+class NibeGwNumber : public esphome::number::Number, public esphome::Component {
+    float initial_value_{NAN};
+ public:
+    NibeGwNumber(float initial_value) { this->initial_value_ = initial_value; };
+    void setup() override { this->publish_state(this->initial_value_); }
+ protected:
+    void control(float value) override { this->publish_state(value); }
+};
+
 
 class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevice {
-    float get_setup_priority() const override { return setup_priority::BEFORE_CONNECTION; }
+
+    float get_setup_priority() const override { return esphome::setup_priority::BEFORE_CONNECTION; }
     const char* TAG = "nibegw";
     const int requests_queue_max = 3;
     int udp_read_port_  = 9999;
     int udp_write_port_ = 10000;
-    std::set<network::IPAddress> udp_source_ip_;
+    std::set<esphome::network::IPAddress> udp_source_ip_;
     bool is_connected_ = false;
 
     std::vector<target_type> udp_targets_;
@@ -58,13 +70,13 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     void set_read_port(int port) { udp_read_port_ = port; };
     void set_write_port(int port) { udp_write_port_ = port; };
 
-    void add_target(const network::IPAddress& ip, int port)
+    void add_target(const esphome::network::IPAddress& ip, int port)
     {
         auto target = target_type(ip, port);
         udp_targets_.push_back(target);
     }
 
-    void add_source_ip(const network::IPAddress& ip){
+    void add_source_ip(const esphome::network::IPAddress& ip){
         udp_source_ip_.insert(ip);
     };
 
@@ -82,9 +94,11 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
         queue.push(std::move(request));
     }
 
+    void add_rmu_temperature(int address, NibeGwNumber* number);
+
     NibeGw& gw() { return *gw_; }
 
-    NibeGwComponent(GPIOPin* dir_pin);
+    NibeGwComponent(esphome::GPIOPin* dir_pin);
 
     void setup();
     void dump_config();

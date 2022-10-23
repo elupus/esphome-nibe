@@ -1,22 +1,27 @@
 from operator import xor
 from functools import reduce
+from xml.etree.ElementInclude import default_loader
 
 import esphome.config_validation as cv
 import esphome.codegen as cg
 from esphome.const import (
     CONF_ID,
+    CONF_INITIAL_VALUE,
+    CONF_UNIT_OF_MEASUREMENT,
+    CONF_MODE,
     CONF_DEBUG,
 )
 from esphome import pins
 from esphome.core import CORE
 from esphome.components.network import IPAddress
 from enum import IntEnum, Enum
-from esphome.components import uart
+from esphome.components import uart, number
 
-
+AUTO_LOAD = ["number"]
 DEPENDENCIES = ["logger"]
 
 NibeGwComponent = cg.global_ns.class_("NibeGwComponent", cg.Component, uart.UARTDevice)
+NibeGwNumber = cg.global_ns.class_("NibeGwNumber", number.Number)
 
 CONF_DIR_PIN = "dir_pin"
 CONF_TARGET = "target"
@@ -37,6 +42,7 @@ CONF_COMMAND = "command"
 CONF_DATA = "data"
 CONF_CONSTANTS = "constants"
 CONF_RMU = "rmu"
+CONF_TEMPERATURE = "temperature"
 class Addresses(IntEnum):
     MODBUS40 = 0x20
     SMS40 = 0x16
@@ -95,6 +101,13 @@ RMU_SCHEMA = cv.Schema(
             Addresses.RMU40_S3.name: Addresses.RMU40_S3.value,
             Addresses.RMU40_S4.name: Addresses.RMU40_S4.value,
         }),
+        cv.Required(CONF_TEMPERATURE): number.NUMBER_SCHEMA.extend(
+            {
+                cv.GenerateID(): cv.declare_id(NibeGwNumber),
+                cv.Optional(CONF_INITIAL_VALUE, default=20.0): float,
+                cv.Optional(CONF_UNIT_OF_MEASUREMENT, default="C"): str,
+                cv.Optional(CONF_MODE, default="BOX"): cv.enum(number.NUMBER_MODES, upper=True),
+            })
     }
 )
 
@@ -106,7 +119,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_DIR_PIN): pins.gpio_output_pin_schema,
         cv.Optional(CONF_DEBUG, default=False): cv.boolean,
         cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA),
-        cv.Optional(CONF_RMU): cv.ensure_list(CONF_RMU)
+        cv.Optional(CONF_RMU, default=[]): cv.ensure_list(RMU_SCHEMA)
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
@@ -150,6 +163,19 @@ async def to_code(config):
     else:
         cg.add(var.gw().setSendAcknowledge(0))
 
+    for rmu in config[CONF_RMU]:
+        rmu_temperature_var = cg.new_Pvariable(
+            rmu[CONF_TEMPERATURE][CONF_ID],
+            rmu[CONF_TEMPERATURE][CONF_INITIAL_VALUE]
+        )
+        await number.register_number(
+            rmu_temperature_var,
+            rmu[CONF_TEMPERATURE],
+            min_value=-7,
+            max_value=40,
+            step=0.1
+        )
+        cg.add(var.add_rmu_temperature(rmu[CONF_ADDRESS], rmu_temperature_var))
 
     def xor8(data: bytes) -> int:
         chksum = reduce(xor, data)

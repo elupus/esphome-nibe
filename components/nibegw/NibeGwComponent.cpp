@@ -156,3 +156,16 @@ void NibeGwComponent::loop()
         gw_->loop();
     } while(gw_->messageStillOnProgress());
 }
+
+void NibeGwComponent::add_rmu_temperature(int address, NibeGwNumber* number)
+{
+    number->add_on_state_callback([this, address](float sensor_value) {
+        int value = rintf((sensor_value + 7.0) * 10);
+        ESP_LOGI(TAG, "Updating RMU %d temperature constant to %x(%f)", address, value, sensor_value);
+        this->set_const_request(address, RMU_DATA_TOKEN, {
+            0x06,
+            (byte)(value & 0xff),
+            (byte)((value >> 8) & value)
+        });
+    });
+}
