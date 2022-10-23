@@ -63,7 +63,7 @@ uart:
 nibegw:
   dir_pin:
     number: GPIO4
-    invert: false
+    inverted: false
 
   # If you have a named uart instance, you can specify this here.
   uart_id: my_uart
