@@ -41,6 +41,7 @@ output:
 uart:
   rx_pin: GPIO21
   tx_pin: GPIO22
+  baud_rate: 9600
 
 # Configure NibeGW
 nibegw:
