@@ -10,6 +10,8 @@ api:
 ota:
   password: !secret OTA_PASSWORD
 
+logger:
+
 wifi:
   ssid: !secret WIFI_SSID
   password: !secret WIFI_PASSWORD
