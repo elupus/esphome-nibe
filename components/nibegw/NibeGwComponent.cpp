@@ -9,8 +9,13 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin *dir_pin) {
       std::bind(&NibeGwComponent::callback_msg_received, this, std::placeholders::_1, std::placeholders::_2),
       std::bind(&NibeGwComponent::callback_msg_token_received, this, std::placeholders::_1, std::placeholders::_2));
 
-  udp_read_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, READ_TOKEN); });
-  udp_write_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, WRITE_TOKEN); });
+  for (auto &x : requests_sockets_) {
+    auto address = std::get<0>(x.first);
+    auto token = std::get<1>(x.first);
+
+    x.second.socket->onPacket(
+        [this, address, token](AsyncUDPPacket packet) { token_request_cache(packet, address, token); });
+  }
 }
 
 static request_data_type dedup(const byte *const data, int len, byte val) {
@@ -40,10 +45,15 @@ void NibeGwComponent::callback_msg_received(const byte *const data, int len) {
     return;
   }
 
+  /* always sending standard data from modbus read token */
+  auto &udp = requests_sockets_[request_key_type(MODBUS40, READ_TOKEN)].socket;
+  if (!udp)
+    return;
+
   ESP_LOGD(TAG, "UDP Packet with %d bytes to send", len);
   for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++) {
     ip_addr_t address = (ip_addr_t) std::get<0>(*target);
-    if (!udp_read_.writeTo(data, len, &address, std::get<1>(*target))) {
+    if (!udp.writeTo(data, len, &address, std::get<1>(*target))) {
       ESP_LOGW(TAG, "UDP Packet send failed to %s:%d", std::get<0>(*target).str().c_str(), std::get<1>(*target));
     }
   }
@@ -124,22 +134,25 @@ void NibeGwComponent::dump_config() {
   for (auto address = udp_source_ip_.begin(); address != udp_source_ip_.end(); address++) {
     ESP_LOGCONFIG(TAG, " Source: %s", address->str().c_str());
   }
-  ESP_LOGCONFIG(TAG, " Read Port: %d", udp_read_port_);
-  ESP_LOGCONFIG(TAG, " Write Port: %d", udp_write_port_);
+  for (auto const &x : requests_sockets_) {
+    ESP_LOGCONFIG(TAG, " Handler %x:%x Port: %d", std::get<0>(x.first), std::get<1>(x.first), x.second.port);
+  }
 }
 
 void NibeGwComponent::loop() {
   if (network::is_connected() && !is_connected_) {
     ESP_LOGI(TAG, "Connecting network ports.");
-    udp_read_.listen(udp_read_port_);
-    udp_write_.listen(udp_write_port_);
+    for (auto &x : requests_sockets_) {
+      x.second.socket->listen(x.second.port);
+    }
     is_connected_ = true;
   }
 
   if (!network::is_connected() && is_connected_) {
     ESP_LOGI(TAG, "Disconnecting network ports.");
-    udp_read_.close();
-    udp_write_.close();
+    for (auto &x : requests_sockets_) {
+      x.second.socket->close();
+    }
     is_connected_ = false;
   }
 

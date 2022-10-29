@@ -101,6 +101,11 @@ nibegw:
     # Optional port this device will listen to to receive write request. Defaults to 10000
     write_port: 10000
 
+    # Optional command ports for specific requests.
+    # ports:
+    #  - address: RMU40_S3
+    #    token: RMU_WRITE
+    #    port: 10001
 
   acknowledge:
     - MODBUS40
