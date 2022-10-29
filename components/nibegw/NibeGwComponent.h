@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
@@ -28,6 +29,11 @@ typedef std::vector<uint8_t> request_data_type;
 typedef std::function<request_data_type(void)> request_provider_type;
 typedef std::function<void(const request_data_type &)> message_listener_type;
 
+struct request_socket_type {
+  int port;
+  std::unique_ptr<socket::Socket> socket;
+};
+
 class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDevice {
   float get_setup_priority() const override {
     return setup_priority::PROCESSOR;
@@ -35,8 +41,6 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   const char *TAG = "nibegw";
   const int requests_queue_max = 3;
   const uint32_t target_timeout_ms_ = 60000;
-  int udp_read_port_ = 9999;
-  int udp_write_port_ = 10000;
   bool is_connected_ = false;
 
   std::vector<socket_address> udp_sources_;
@@ -44,30 +48,22 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   std::map<socket_address, uint32_t> udp_targets_;
   std::map<request_key_type, std::queue<request_data_type>> requests_;
   std::map<request_key_type, request_provider_type> requests_provider_;
+  std::map<request_key_type, request_socket_type> requests_sockets_;
   std::map<request_key_type, message_listener_type> message_listener_;
   HighFrequencyLoopRequester high_freq_;
 
   NibeGw *gw_;
 
-  std::unique_ptr<socket::Socket> udp_read_;
-  std::unique_ptr<socket::Socket> udp_write_;
-
   void callback_msg_received(const uint8_t *data, int len);
   int callback_msg_token_received(uint16_t address, uint8_t command, uint8_t *data);
   void callback_debug(uint8_t verbose, char *data);
 
+  void run_request_socket(const request_key_type &key, request_socket_type &data);
   void recv_local_socket(std::unique_ptr<socket::Socket> &fd, int address, int token);
 
   std::unique_ptr<socket::Socket> bind_local_socket(int port);
 
  public:
-  void set_read_port(int port) {
-    udp_read_port_ = port;
-  };
-  void set_write_port(int port) {
-    udp_write_port_ = port;
-  };
-
   void add_target(const network::IPAddress &ip, int port) {
     udp_targets_static_.push_back(socket_address(ip, port));
   }
@@ -75,6 +71,11 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   void add_source_ip(const network::IPAddress &ip) {
     udp_sources_.push_back(socket_address(ip, 0));
   };
+
+  void add_socket_request(int address, int token, int port) {
+    auto &handler = requests_sockets_[request_key_type(address, token)];
+    handler.port = port;
+  }
 
   void set_request(int address, int token, request_data_type request) {
     set_request(address, token, [request] { return request; });
@@ -94,6 +95,10 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
       queue.pop();
     }
     queue.push(std::move(request));
+  }
+
+  void add_acknowledge(int address) {
+    gw_->setAcknowledge(address, true);
   }
 
   NibeGw &gw() {

@@ -39,6 +39,8 @@ void NibeGwComponent::callback_msg_received(const uint8_t *data, int len) {
     return;
   }
 
+  /* always sending standard data from modbus read token */
+  auto &udp_read_ = requests_sockets_[request_key_type(MODBUS40, READ_TOKEN)].socket;
   if (!udp_read_) {
     ESP_LOGW(TAG, "UDP read socket not available");
     return;
@@ -134,8 +136,9 @@ void NibeGwComponent::dump_config() {
   for (auto &&address : udp_sources_) {
     ESP_LOGCONFIG(TAG, " Source: %s", address.str().c_str());
   }
-  ESP_LOGCONFIG(TAG, " Read Port: %d", udp_read_port_);
-  ESP_LOGCONFIG(TAG, " Write Port: %d", udp_write_port_);
+  for (auto const &x : requests_sockets_) {
+    ESP_LOGCONFIG(TAG, " Handler %x:%x Port: %d", std::get<0>(x.first), std::get<1>(x.first), x.second.port);
+  }
 }
 
 std::unique_ptr<socket::Socket> NibeGwComponent::bind_local_socket(int port) {
@@ -159,6 +162,30 @@ std::unique_ptr<socket::Socket> NibeGwComponent::bind_local_socket(int port) {
   return fd;
 }
 
+void NibeGwComponent::run_request_socket(const request_key_type &key, request_socket_type &data) {
+  if (!is_connected_) {
+    if (data.socket) {
+      data.socket.release();
+    }
+    return;
+  }
+
+  if (!data.socket) {
+    data.socket = bind_local_socket(data.port);
+  }
+
+  if (!data.socket) {
+    return;
+  }
+
+  if (!data.socket->ready()) {
+    return;
+  }
+
+  auto &[address, token] = key;
+  recv_local_socket(data.socket, address, token);
+}
+
 void NibeGwComponent::loop() {
   // Handle network connection state
 
@@ -167,26 +194,10 @@ void NibeGwComponent::loop() {
       ESP_LOGI(TAG, "Connecting network ports.");
       is_connected_ = true;
     }
-
-    // Create and bind read socket
-    if (!udp_read_) {
-      udp_read_ = bind_local_socket(udp_read_port_);
-    }
-
-    if (!udp_write_) {
-      udp_write_ = bind_local_socket(udp_write_port_);
-    }
   } else {
     if (is_connected_) {
       ESP_LOGI(TAG, "Disconnecting network ports.");
       is_connected_ = false;
-    }
-
-    if (udp_read_) {
-      udp_read_.release();
-    }
-    if (udp_write_) {
-      udp_write_.release();
     }
   }
 
@@ -201,12 +212,8 @@ void NibeGwComponent::loop() {
   std::erase_if(udp_targets_, [&](const auto &item) { return now - item.second > target_timeout_ms_; });
 
   // Poll sockets for incoming packets
-  if (udp_read_ && udp_read_->ready()) {
-    recv_local_socket(udp_read_, MODBUS40, READ_TOKEN);
-  }
-
-  if (udp_write_ && udp_write_->ready()) {
-    recv_local_socket(udp_write_, MODBUS40, WRITE_TOKEN);
+  for (auto &[key, data] : requests_sockets_) {
+    run_request_socket(key, data);
   }
 
   // Handle high frequency loop requirement
