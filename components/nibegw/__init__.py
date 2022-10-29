@@ -3,9 +3,11 @@ from functools import reduce
 
 import esphome.config_validation as cv
 import esphome.codegen as cg
-from esphome.const import CONF_ID
+from esphome.const import (
+    CONF_ID,
+    CONF_PORT,
+)
 from esphome import pins
-from esphome.core import CORE
 from esphome.components.network import IPAddress
 from enum import IntEnum, Enum
 from esphome.components import uart
@@ -28,6 +30,7 @@ CONF_ACKNOWLEDGE_RMU40 = "rmu40"
 CONF_ACKNOWLEDGE_SMS40 = "sms40"
 CONF_READ_PORT = "read_port"
 CONF_WRITE_PORT = "write_port"
+CONF_PORTS = "ports"
 CONF_SOURCE = "source"
 CONF_ADDRESS = "address"
 CONF_TOKEN = "token"
@@ -76,12 +79,21 @@ TARGET_SCHEMA = cv.Schema(
     }
 )
 
+PORTS_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_PORT): cv.port,
+        cv.Required(CONF_ADDRESS): cv.Any(real_enum(Addresses), int),
+        cv.Required(CONF_TOKEN): cv.Any(real_enum(Token), int),
+    }
+)
+
 UDP_SCHEMA = cv.Schema(
     {
         cv.Optional(CONF_TARGET, []): cv.ensure_list(TARGET_SCHEMA),
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
-        cv.Optional(CONF_SOURCE, []): cv.ensure_list(cv.ipv4address)
+        cv.Optional(CONF_SOURCE, []): cv.ensure_list(cv.ipv4address),
+        cv.Optional(CONF_PORTS, []): cv.ensure_list(PORTS_SCHEMA)
     }
 )
 
@@ -112,16 +124,20 @@ async def to_code(config):
     if udp := config.get(CONF_UDP):
         for target in udp[CONF_TARGET]:
             cg.add(var.add_target(IPAddress(str(target[CONF_TARGET_IP])), target[CONF_TARGET_PORT]))
-        cg.add(var.set_read_port(udp[CONF_READ_PORT]))
-        cg.add(var.set_write_port(udp[CONF_WRITE_PORT]))
+
+        if port_number := udp[CONF_READ_PORT]:
+            cg.add(var.add_socket_request(Addresses.MODBUS40.value, Token.MODBUS_READ.value, port_number))
+        if port_number := udp[CONF_WRITE_PORT]:
+            cg.add(var.add_socket_request(Addresses.MODBUS40.value, Token.MODBUS_WRITE.value, port_number))
+        for port in udp[CONF_PORTS]:
+            cg.add(var.add_socket_request(port[CONF_ADDRESS], port[CONF_TOKEN], port[CONF_PORT]))
+
         for source in udp[CONF_SOURCE]:
             cg.add(var.add_source_ip(IPAddress(str(source))))
 
     if config[CONF_ACKNOWLEDGE]:
         for address in config[CONF_ACKNOWLEDGE]:
-            cg.add(
-                var.gw().setAcknowledge(address, True)
-            )
+            cg.add(var.add_acknowledge(address))
 
     def xor8(data: bytes) -> int:
         chksum = reduce(xor, data)
