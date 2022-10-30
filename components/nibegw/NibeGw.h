@@ -95,6 +95,8 @@ class NibeGw
     boolean sendAcknowledge;
 
     int checkNibeMessage(const byte* const data, byte len);
+    int checkNibeRequest(const byte* const data, byte len);
+    int calcChecksum(const byte* const data, byte len);
     void sendData(const byte* const data, byte len);
     void sendAck();
     void sendNak();
