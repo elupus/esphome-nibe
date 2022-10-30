@@ -199,7 +199,11 @@ void NibeGw::loop()
         int msglen = callback_msg_token_received((eTokenType)(buffer[3]), buffer);
         if (msglen > 0)
         {
-          sendData(buffer, (byte) msglen);
+          int msgnok = checkNibeRequest(buffer, msglen);
+          if (msgnok == 0)
+            sendData(buffer, (byte) msglen);
+          else
+            sendAck();
         }
         else
         {
@@ -255,12 +259,7 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len)
       if (len < datalen + 6)
         return 0;
 
-      byte checksum = 0;
-
-      // calculate XOR checksum
-      for (int i = 2; i < (datalen + 5); i++)
-        checksum ^= data[i];
-
+      byte checksum = calcChecksum(&data[2], datalen + 3);
       byte msg_checksum = data[datalen + 5];
 
 #ifdef ENABLE_NIBE_DEBUG
@@ -284,6 +283,44 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len)
 
   return 0;
 }
+
+/*
+   Return:
+     0 if ok
+    -1 if invalid message
+    -2 if checksum fails
+*/
+int NibeGw::checkNibeRequest(const byte* const data, byte len)
+{
+  if (len < 3)
+    return -1;
+
+  byte checksum = calcChecksum(data, len - 1);
+  byte msg_checksum = data[len - 1];
+
+#ifdef ENABLE_NIBE_DEBUG
+  if (debug) {
+    sprintf(debug_buf, "\nchecksum=%02X, msg_checksum=%02X\n", checksum, msg_checksum);
+    debug(4, debug_buf);
+  }
+#endif
+
+  if (checksum != msg_checksum)
+  {
+    if (checksum != 0x5C && msg_checksum != 0xC5)
+      return -2;
+  }
+  return 0;
+}
+
+int NibeGw::calcChecksum(const byte* const data, byte len)
+{
+  byte checksum = 0;
+  for (int i = 0; i < len; i++)
+    checksum ^= data[i];
+  return checksum;
+}
+
 
 void NibeGw::sendData(const byte* const data, byte len)
 {
