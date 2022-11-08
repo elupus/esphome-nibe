@@ -189,7 +189,7 @@ void NibeGw::loop()
         break;
       }
 
-      if (buffer[0] == 0x5C && buffer[1] == 0x00 && buffer[4] == 0x00)
+      if (buffer[0] == 0x5C && buffer[4] == 0x00)
       {
 #ifdef ENABLE_NIBE_DEBUG
         if (debug)
@@ -241,12 +241,6 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len)
   {
     if (data[0] != 0x5C)
       return -1;
-
-    if (len >= 2)
-    {
-      if (data[1] != 0x00)
-        return -1;
-    }
 
     if (len >= 6)
     {
