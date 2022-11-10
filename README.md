@@ -1,6 +1,6 @@
 # ESPHome components for Nibe heat pumps
 
-A ESPHome components that wraps the Arduino based udp gateway `NibeGW` up for use with ESPHome configuration.
+An ESPHome component that wraps the Arduino based udp gateway `NibeGW` up, for use with ESPHome configuration.
 
 ## Background
 
