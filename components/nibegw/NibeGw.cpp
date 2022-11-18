@@ -37,6 +37,8 @@ void NibeGw::connect()
   {
     state = STATE_WAIT_START;
     connectionState = true;
+    if (directionPin)
+      directionPin->setup();
   }
 }
 
