@@ -254,7 +254,7 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len)
       byte checksum = 0;
 
       // calculate XOR checksum
-      for (int i = 2; i < (datalen + 5); i++)
+      for (int i = 1; i < (datalen + 5); i++)
         checksum ^= data[i];
 
       byte msg_checksum = data[datalen + 5];
