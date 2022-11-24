@@ -63,8 +63,7 @@ void NibeGwComponent::token_request_cache(AsyncUDPPacket& udp, byte address, byt
     }
 
     request_data_type request;
-    request.resize(size);
-    udp.read(&request[0], size);
+    request.assign(udp.data(), udp.data()+size);
     add_queued_request(address, token, std::move(request));
 }
 

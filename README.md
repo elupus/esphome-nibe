@@ -38,8 +38,6 @@ Minimal Config
 ```yaml
 esphome:
   name: nibegw
-  libraries:
-    - "ESP32 Async UDP"
 
 external_components:
   - source: 

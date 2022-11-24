@@ -117,9 +117,11 @@ async def to_code(config):
 
     if CORE.is_esp32:
         cg.add_build_flag("-DHARDWARE_SERIAL_WITH_PINS")
+        cg.add_library("ESP32 Async UDP", None)
 
     if CORE.is_esp8266:
         cg.add_build_flag("-DHARDWARE_SERIAL")
+        cg.add_library("ESPAsyncUDP", None)
 
     if udp := config.get(CONF_UDP):
         for target in udp[CONF_TARGET]:
