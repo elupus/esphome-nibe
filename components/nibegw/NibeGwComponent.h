@@ -15,11 +15,12 @@
 
 #ifdef USE_ESP32
 #include <WiFi.h>
+#include "AsyncUDP.h"
 #endif
 
 #ifdef USE_ESP8266
 #include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
+#include "ESPAsyncUDP.h"
 #endif
 
 using namespace esphome;
@@ -44,14 +45,14 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
 
     NibeGw* gw_;
 
-    WiFiUDP udp_read_;
-    WiFiUDP udp_write_;
+    AsyncUDP udp_read_;
+    AsyncUDP udp_write_;
 
     void callback_msg_received(const byte* const data, int len);
     int callback_msg_token_received(eTokenType token, byte* data);
     void callback_debug(byte verbose, char* data);
 
-    void token_request_cache(WiFiUDP& udp, byte address, byte token);
+    void token_request_cache(AsyncUDPPacket& udp, byte address, byte token);
 
     public:
 

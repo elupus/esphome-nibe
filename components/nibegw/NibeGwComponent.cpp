@@ -13,6 +13,12 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin* dir_pin)
     gw_->setVerboseLevel(1);
 
 
+    udp_read_.onPacket([this](AsyncUDPPacket packet) {
+        token_request_cache(packet, MODBUS40, READ_TOKEN);
+    });
+    udp_write_.onPacket([this](AsyncUDPPacket packet) {
+        token_request_cache(packet, MODBUS40, WRITE_TOKEN);
+    });
 }
 
 void NibeGwComponent::callback_msg_received(const byte* const data, int len)
@@ -24,12 +30,7 @@ void NibeGwComponent::callback_msg_received(const byte* const data, int len)
     ESP_LOGD(TAG, "UDP Packet with %d bytes to send", len);
     for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++)
     {
-        udp_read_.beginPacket(
-            (uint32_t)std::get<0>(*target),
-            std::get<1>(*target)
-        );
-        udp_read_.write(data, len);
-        if (!udp_read_.endPacket()) {
+        if (!udp_read_.writeTo(data, len, (uint32_t)std::get<0>(*target), std::get<1>(*target))) {
             ESP_LOGW(TAG, "UDP Packet send failed to %s:%d",
                           std::get<0>(*target).str().c_str(),
                           std::get<1>(*target));
@@ -37,13 +38,13 @@ void NibeGwComponent::callback_msg_received(const byte* const data, int len)
     }
 }
 
-void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte token)
+void NibeGwComponent::token_request_cache(AsyncUDPPacket& udp, byte address, byte token)
 {
     if (!is_connected_) {
         return;
     }
 
-    int size = udp.parsePacket();
+    int size = udp.length();
     if (size == 0) {
         return;
     }
@@ -62,8 +63,7 @@ void NibeGwComponent::token_request_cache(WiFiUDP& udp, byte address, byte token
     }
 
     request_data_type request;
-    request.resize(size);
-    udp.read(&request[0], size);
+    request.assign(udp.data(), udp.data()+size);
     add_queued_request(address, token, std::move(request));
 }
 
@@ -138,20 +138,20 @@ void NibeGwComponent::loop()
 {
     if (network::is_connected() && !is_connected_) {
         ESP_LOGI(TAG, "Connecting network ports.");
-        udp_read_.begin(udp_read_port_);
-        udp_write_.begin(udp_write_port_);
+        udp_read_.listen(udp_read_port_);
+        udp_write_.listen(udp_write_port_);
         is_connected_ = true;
     }
 
     if (!network::is_connected() && is_connected_) {
         ESP_LOGI(TAG, "Disconnecting network ports.");
-        udp_read_.stop();
-        udp_write_.stop();
+        udp_read_.close();
+        udp_write_.close();
         is_connected_ = false;
     }
 
-    token_request_cache(udp_read_, MODBUS40, READ_TOKEN);
-    token_request_cache(udp_write_, MODBUS40, WRITE_TOKEN);
+    
+
     do {
         gw_->loop();
     } while(gw_->messageStillOnProgress());
