@@ -36,9 +36,6 @@ Add the following to a ESPHome configuration to enable the udp gateway feature t
 Minimal Config
 
 ```yaml
-esphome:
-  name: nibegw
-
 external_components:
   - source: 
       type: git
