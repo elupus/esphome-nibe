@@ -4,6 +4,7 @@
 #include <queue>
 #include <vector>
 #include <cstddef>
+#include <memory>
 
 #include "esphome.h"
 #include "esphome/core/component.h"
@@ -34,19 +35,20 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     float get_setup_priority() const override { return setup_priority::BEFORE_CONNECTION; }
     const char* TAG = "nibegw";
     const int requests_queue_max = 3;
-    int udp_read_port_  = 9999;
-    int udp_write_port_ = 10000;
     std::set<network::IPAddress> udp_source_ip_;
     bool is_connected_ = false;
+
+    struct request_socket_type {
+        int                           port;
+        std::unique_ptr<AsyncUDP>     socket;
+    };
 
     std::vector<target_type> udp_targets_;
     std::map<request_key_type, std::queue<request_data_type>> requests_; 
     std::map<request_key_type, request_data_type>             requests_const_; 
+    std::map<request_key_type, request_socket_type>           requests_sockets_;
 
     NibeGw* gw_;
-
-    AsyncUDP udp_read_;
-    AsyncUDP udp_write_;
 
     void callback_msg_received(const byte* const data, int len);
     int callback_msg_token_received(eTokenType token, byte* data);
@@ -56,8 +58,12 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
 
     public:
 
-    void set_read_port(int port) { udp_read_port_ = port; };
-    void set_write_port(int port) { udp_write_port_ = port; };
+    void add_socket_request(int address, int token, int port)
+    {
+        auto& handler = requests_sockets_[request_key_type(address, token)];
+        handler.port = port;
+        handler.socket = make_unique<AsyncUDP>();
+    }
 
     void add_target(const network::IPAddress& ip, int port)
     {
@@ -65,7 +71,8 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
         udp_targets_.push_back(target);
     }
 
-    void add_source_ip(const network::IPAddress& ip){
+    void add_source_ip(const network::IPAddress& ip)
+    {
         udp_source_ip_.insert(ip);
     };
 
@@ -83,7 +90,11 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
         queue.push(std::move(request));
     }
 
-    NibeGw& gw() { return *gw_; }
+    void add_acknowledge(int address)
+    {
+        gw_->setSendAcknowledge(1);
+        gw_->setAcknowledge(address, true);
+    }
 
     NibeGwComponent(GPIOPin* dir_pin);
 
