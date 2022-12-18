@@ -8,6 +8,8 @@ from esphome.const import (
     CONF_PORT,
 )
 from esphome import pins
+from esphome.components import mdns
+from esphome.components.mdns import MDNSComponent, mdns_service, mdns_txt_record, enable_mdns_storage
 from esphome.components.network import IPAddress
 from enum import IntEnum, Enum
 from esphome.components import uart
@@ -37,6 +39,7 @@ CONF_TOKEN = "token"
 CONF_COMMAND = "command"
 CONF_DATA = "data"
 CONF_CONSTANTS = "constants"
+CONF_MDNS = "mdns"
 
 class Addresses(IntEnum):
     MODBUS40 = 0x20
@@ -62,6 +65,10 @@ def addresses_string(value):
 
 def real_enum(enum: Enum):
     return cv.enum({i.name: i.value for i in enum})
+
+# this is a hack to ensure esphome allocate a slot for this service
+mdns.COMPONENTS_WITH_MDNS_SERVICES = {*mdns.COMPONENTS_WITH_MDNS_SERVICES, "nibegw"}
+
 
 CONSTANTS_SCHEMA = cv.Schema(
     {
@@ -100,6 +107,7 @@ UDP_SCHEMA = cv.Schema(
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(NibeGwComponent),
+        cv.Optional(CONF_MDNS): cv.use_id(MDNSComponent),
         cv.Optional(CONF_ACKNOWLEDGE, default=[]): [cv.Any(addresses_string, cv.Coerce(int))],
         cv.Required(CONF_UDP): UDP_SCHEMA,
         cv.Optional(CONF_DIR_PIN): pins.gpio_output_pin_schema,
@@ -125,12 +133,18 @@ async def to_code(config):
         for target in udp[CONF_TARGET]:
             cg.add(var.add_target(IPAddress(str(target[CONF_TARGET_IP])), target[CONF_TARGET_PORT]))
 
+        txt_records = []
+
+        def add_socket_request(address: int, token: int, port: int):
+            cg.add(var.add_socket_request(address, token, port))
+            txt_records.append(mdns_txt_record(f"a{address:04x}t{token:02x}", f"{port}"))
+
         if port_number := udp[CONF_READ_PORT]:
-            cg.add(var.add_socket_request(Addresses.MODBUS40.value, Token.MODBUS_READ.value, port_number))
+            add_socket_request(Addresses.MODBUS40.value, Token.MODBUS_READ.value, port_number)
         if port_number := udp[CONF_WRITE_PORT]:
-            cg.add(var.add_socket_request(Addresses.MODBUS40.value, Token.MODBUS_WRITE.value, port_number))
+            add_socket_request(Addresses.MODBUS40.value, Token.MODBUS_WRITE.value, port_number)
         for port in udp[CONF_PORTS]:
-            cg.add(var.add_socket_request(port[CONF_ADDRESS], port[CONF_TOKEN], port[CONF_PORT]))
+            add_socket_request(port[CONF_ADDRESS], port[CONF_TOKEN], port[CONF_PORT])
 
         for source in udp[CONF_SOURCE]:
             cg.add(var.add_source_ip(IPAddress(str(source))))
@@ -138,6 +152,14 @@ async def to_code(config):
     if config[CONF_ACKNOWLEDGE]:
         for address in config[CONF_ACKNOWLEDGE]:
             cg.add(var.add_acknowledge(address))
+
+    if mdns_id := config.get(CONF_MDNS):
+        cg.add_define("USE_MDNS_EXTRA_SERVICES")
+        cg.add_define("USE_MDNS_STORE_SERVICES")
+
+        mdns_var = await cg.get_variable(mdns_id)
+        service = mdns_service("_nibegw", "_udp", 0, txt_records)
+        cg.add(mdns_var.add_extra_service(service))
 
     def xor8(data: bytes) -> int:
         chksum = reduce(xor, data)
