@@ -142,7 +142,7 @@ nibegw:
       data: [
             0x06, # Temperature
             0x14, # degrees low
-            0x00, # degrees hight
+            0x00, # degrees high
       ]
 ```
 
