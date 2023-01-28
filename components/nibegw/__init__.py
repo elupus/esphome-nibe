@@ -3,10 +3,7 @@ from functools import reduce
 
 import esphome.config_validation as cv
 import esphome.codegen as cg
-from esphome.const import (
-    CONF_ID,
-    CONF_DEBUG,
-)
+from esphome.const import CONF_ID
 from esphome import pins
 from esphome.core import CORE
 from esphome.components.network import IPAddress
@@ -24,6 +21,7 @@ CONF_TARGET_PORT = "port"
 CONF_TARGET_IP = "ip"
 CONF_ACKNOWLEDGE = "acknowledge"
 CONF_UDP = "udp"
+CONF_DEBUG = "debug"
 
 CONF_ACKNOWLEDGE_MODBUS40 = "modbus40"
 CONF_ACKNOWLEDGE_RMU40 = "rmu40"
