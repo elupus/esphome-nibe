@@ -4,6 +4,7 @@
 #include <queue>
 #include <vector>
 #include <cstddef>
+#include <map>
 
 #include "esphome.h"
 #include "esphome/core/component.h"
