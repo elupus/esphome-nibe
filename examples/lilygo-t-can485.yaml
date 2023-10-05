@@ -6,6 +6,7 @@ esphome:
 
 # General ESPHome setup
 api:
+  reboot_timeout: 0s
 
 ota:
   password: !secret OTA_PASSWORD
