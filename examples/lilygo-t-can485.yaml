@@ -56,7 +56,7 @@ nibegw:
     # When using Home Assistant: this is your Home Assistant IP.
     target:
       - ip: 192.168.255.254
-        port: 9999
+        port: 9999 #The Nibe Home Assistant integration listens to 9999 by default 
 
     # List of source address to accept data from, may be empty for no filter
     source:
