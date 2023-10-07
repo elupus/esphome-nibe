@@ -17,6 +17,9 @@ wifi:
   ssid: !secret WIFI_SSID
   password: !secret WIFI_PASSWORD
   fast_connect: true # Fast connect to connect to my hidden network
+  # It is recommended to disable powersave mode on wifi, to make sure the device does not miss UDP requests sent.
+  power_save_mode: none
+  # The device needs a static IP. Either do that here with the manual_ip node, or do it via another way (router)
 
 # Load nibe component
 external_components:
@@ -50,13 +53,20 @@ uart:
 nibegw:
   udp:
     # The target address(s) to send data to. May be a multicast address.
+    # When using Home Assistant: this is your Home Assistant IP.
     target:
       - ip: 192.168.255.254
-        port: 10090
+        port: 9999 #The Nibe Home Assistant integration listens to 9999 by default 
 
     # List of source address to accept data from, may be empty for no filter
     source:
       - 192.168.255.254
+
+    # Optional port this device will listen to to receive read requests. Defaults to 9999
+    # read_port: 9999
+
+    # Optional port this device will listen to to receive write request. Defaults to 10000
+    # write_port: 10000
 
   acknowledge:
     - MODBUS40
