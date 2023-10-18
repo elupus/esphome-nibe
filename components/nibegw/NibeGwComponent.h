@@ -37,7 +37,7 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     const int requests_queue_max = 3;
     int udp_read_port_  = 9999;
     int udp_write_port_ = 10000;
-    std::set<network::IPAddress> udp_source_ip_;
+    std::vector<network::IPAddress> udp_source_ip_;
     bool is_connected_ = false;
 
     std::vector<target_type> udp_targets_;
@@ -67,7 +67,7 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     }
 
     void add_source_ip(const network::IPAddress& ip){
-        udp_source_ip_.insert(ip);
+        udp_source_ip_.push_back(ip);
     };
 
     void set_const_request(int address, int token, request_data_type request)
