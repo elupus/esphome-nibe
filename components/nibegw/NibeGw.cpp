@@ -22,7 +22,6 @@
 
 NibeGw::NibeGw(esphome::uart::UARTDevice* serial, esphome::GPIOPin* RS485DirectionPin)
 {
-  verbose = 0;
   sendAcknowledge = true;
   state = STATE_WAIT_START;
   connectionState = false;
@@ -53,11 +52,6 @@ void NibeGw::disconnect()
 boolean NibeGw::connected()
 {
   return connectionState;
-}
-
-void NibeGw::setVerboseLevel(byte level)
-{
-  verbose = level;
 }
 
 NibeGw& NibeGw::setCallback(callback_msg_received_type callback_msg_received, callback_msg_token_received_type callback_msg_token_received)

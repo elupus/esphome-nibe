@@ -90,7 +90,6 @@ class NibeGw
     esphome::uart::UARTDevice* RS485;
     callback_msg_received_type callback_msg_received;
     callback_msg_token_received_type callback_msg_token_received;
-    byte verbose;
     std::set<byte> addressAcknowledge;
     boolean sendAcknowledge;
 
@@ -116,7 +115,6 @@ class NibeGw
     void connect();
     void disconnect();
     boolean connected();
-    void setVerboseLevel(byte level);
     boolean messageStillOnProgress();
     void loop();
 

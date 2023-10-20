@@ -10,8 +10,6 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin* dir_pin)
 #ifdef ENABLE_NIBE_DEBUG
     gw_->setDebugCallback(std::bind(&NibeGwComponent::callback_debug, this, std::placeholders::_1, std::placeholders::_2));
 #endif
-    gw_->setVerboseLevel(1);
-
 
     udp_read_.onPacket([this](AsyncUDPPacket packet) {
         token_request_cache(packet, MODBUS40, READ_TOKEN);
