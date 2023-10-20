@@ -7,9 +7,6 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin* dir_pin)
     gw_ = new NibeGw(this, dir_pin);
     gw_->setCallback(std::bind(&NibeGwComponent::callback_msg_received, this, std::placeholders::_1, std::placeholders::_2),
                      std::bind(&NibeGwComponent::callback_msg_token_received, this, std::placeholders::_1, std::placeholders::_2));
-#ifdef ENABLE_NIBE_DEBUG
-    gw_->setDebugCallback(std::bind(&NibeGwComponent::callback_debug, this, std::placeholders::_1, std::placeholders::_2));
-#endif
 
     udp_read_.onPacket([this](AsyncUDPPacket packet) {
         token_request_cache(packet, MODBUS40, READ_TOKEN);
@@ -100,15 +97,6 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
     }
 
     return 0;
-}
-
-void NibeGwComponent::callback_debug(byte verbose, char* data)
-{
-    if(verbose == 1){
-        ESP_LOGI(TAG, "GW: %s", data);
-    } else {
-        ESP_LOGD(TAG, "GW: %s", data);
-    }
 }
 
 void NibeGwComponent::setup() {

@@ -20,6 +20,9 @@
 #include "esphome/core/gpio.h"
 #include "esphome/components/uart/uart.h"
 
+using namespace esphome;
+
+
 NibeGw::NibeGw(esphome::uart::UARTDevice* serial, esphome::GPIOPin* RS485DirectionPin)
 {
   sendAcknowledge = true;
@@ -62,14 +65,6 @@ NibeGw& NibeGw::setCallback(callback_msg_received_type callback_msg_received, ca
   return *this;
 }
 
-#ifdef ENABLE_NIBE_DEBUG
-NibeGw& NibeGw::setDebugCallback(callback_debug_type debug)
-{
-  this->debug = debug;
-  return *this;
-}
-#endif
-
 void NibeGw::setSendAcknowledge(boolean val)
 {
   sendAcknowledge = val;
@@ -100,25 +95,14 @@ void NibeGw::loop()
       if (RS485->available() > 0)
       {
         byte b = RS485->read();
-
-#ifdef ENABLE_NIBE_DEBUG
-        if (debug)
-        {
-          sprintf(debug_buf, "%02X ", b);
-          debug(3, debug_buf);
-        }
-#endif
+        ESP_LOGVV(TAG, "%02X", b);
 
         if (b == 0x5C)
         {
           buffer[0] = b;
           index = 1;
           state = STATE_WAIT_DATA;
-
-#ifdef ENABLE_NIBE_DEBUG
-          if (debug)
-            debug(4, "Frame start found");
-#endif
+          ESP_LOGVV(TAG, "Frame start found");
         }
       }
       break;
@@ -127,14 +111,7 @@ void NibeGw::loop()
       if (RS485->available() > 0)
       {
         byte b = RS485->read();
-
-#ifdef ENABLE_NIBE_DEBUG
-        if (debug)
-        {
-          sprintf(debug_buf, "%02X", b);
-          debug(3, debug_buf);
-        }
-#endif
+        ESP_LOGVV(TAG, "%02X", b);
 
         if (index >= MAX_DATA_LEN)
         {
@@ -145,14 +122,7 @@ void NibeGw::loop()
         {
           buffer[index++] = b;
           int msglen = checkNibeMessage(buffer, index);
-
-#ifdef ENABLE_NIBE_DEBUG
-          if (debug)
-          {
-            sprintf(debug_buf, "checkMsg=%d", msglen);
-            debug(5, debug_buf);
-          }
-#endif
+          ESP_LOGVV(TAG, "checkMsg=%d", msglen);
 
           switch (msglen)
           {
@@ -163,6 +133,16 @@ void NibeGw::loop()
           }
 
           if (msglen) {
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
+            for (byte i = 0; i < msglen && i < DEBUG_BUFFER_LEN/3; i++)
+            {
+              sprintf(debug_buf + i*3, "%02X ", buffer[i]);
+            }
+            ESP_LOGV(TAG, "Message of %d bytes received from heat pump: %s", msglen, debug_buf);
+#else
+            ESP_LOGD(TAG, "Message of %d bytes received from heat pump", msglen);
+#endif
+
             callback_msg_received(buffer, index);
           }
         }
@@ -170,10 +150,7 @@ void NibeGw::loop()
       break;
 
     case STATE_CRC_FAILURE:
-#ifdef ENABLE_NIBE_DEBUG
-      if (debug)
-        debug(1, "CRC failure");
-#endif
+      ESP_LOGW(TAG, "CRC failure");
       if (shouldAckNakSend(buffer[2]))
         sendNak();
       state = STATE_WAIT_START;
@@ -187,10 +164,7 @@ void NibeGw::loop()
 
       if (buffer[0] == 0x5C && buffer[4] == 0x00)
       {
-#ifdef ENABLE_NIBE_DEBUG
-        if (debug)
-          debug(1, "Token received");
-#endif
+        ESP_LOGD(TAG, "Token %02X received", buffer[3]);
 
         int msglen = callback_msg_token_received((eTokenType)(buffer[3]), buffer);
         if (msglen > 0)
@@ -199,21 +173,12 @@ void NibeGw::loop()
         }
         else
         {
-#ifdef ENABLE_NIBE_DEBUG
-          if (debug)
-            debug(2, "No message to send");
-#endif
+          ESP_LOGD(TAG, "No message to send");
           sendAck();
         }
       }
       else
       {
-#ifdef ENABLE_NIBE_DEBUG
-        if (debug)
-        {
-          debug(1, "Message received");
-        }
-#endif
         sendAck();
       }
       state = STATE_WAIT_START;
@@ -253,12 +218,7 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len)
 
       byte msg_checksum = data[datalen + 5];
 
-#ifdef ENABLE_NIBE_DEBUG
-      if (debug) {
-        sprintf(debug_buf, "checksum=%02X, msg_checksum=%02X", checksum, msg_checksum);
-        debug(4, debug_buf);
-      }
-#endif
+      ESP_LOGVV(TAG, "checksum=%02X, msg_checksum=%02X", checksum, msg_checksum);
 
       if (checksum != msg_checksum)
       {
@@ -277,58 +237,49 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len)
 
 void NibeGw::sendData(const byte* const data, byte len)
 {
-#ifdef ENABLE_NIBE_DEBUG
-  if (debug)
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
+  for (byte i = 0; i < len && i < DEBUG_BUFFER_LEN/3; i++)
   {
-    debug(1, "Send message to heat pump: ");
-    for (int i = 0; i < len; i++)
-    {
-      sprintf(debug_buf, "%02X", data[i]);
-      debug(1, debug_buf);
-    }
-    debug(1, "\n");
+    sprintf(debug_buf + i*3, "%02X ", data[i]);
   }
+  ESP_LOGV(TAG, "Send message of %d bytes to heat pump: %s", len, debug_buf);
+#else
+  ESP_LOGD(TAG, "Send message of %d bytes to heat pump", len);
 #endif
 
   if(directionPin)
     directionPin->digital_write(true);
   RS485->write_array(data, len);
   RS485->flush();
-  delay(1);
+  esphome::delay(1);
   if(directionPin)
     directionPin->digital_write(false);
 }
 
 void NibeGw::sendAck()
 {
-#ifdef ENABLE_NIBE_DEBUG
-  if (debug)
-    debug(1, "Send ACK");
-#endif
+  ESP_LOGD(TAG, "Send ACK");
 
   if(directionPin)
     directionPin->digital_write(true);
-  delay(1);
+  esphome::delay(1);
   RS485->write_byte(0x06);
   RS485->flush();
-  delay(1);
+  esphome::delay(1);
   if(directionPin)
     directionPin->digital_write(false);
 }
 
 void NibeGw::sendNak()
 {
-#ifdef ENABLE_NIBE_DEBUG
-  if (debug)
-    debug(1, "Send NACK");
-#endif
+  ESP_LOGD(TAG, "Send NACK");
 
   if(directionPin)
     directionPin->digital_write(true);
-  delay(1);
+  esphome::delay(1);
   RS485->write(0x15);
   RS485->flush();
-  delay(1);
+  esphome::delay(1);
   if(directionPin)
     directionPin->digital_write(false);
 }

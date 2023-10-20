@@ -42,10 +42,10 @@
 #include <functional>
 #include <set>
 
+using namespace esphome;
+
 //#define HARDWARE_SERIAL_WITH_PINS
 //#define HARDWARE_SERIAL
-
-//#define ENABLE_NIBE_DEBUG
 
 // state machine states
 enum eState
@@ -71,10 +71,6 @@ enum eTokenType
 typedef std::function<void(const byte* const data, int len)> callback_msg_received_type;
 typedef std::function<int(eTokenType token, byte* data)> callback_msg_token_received_type;
 
-#ifdef ENABLE_NIBE_DEBUG
-typedef std::function<void(byte verbose, char* data)> callback_debug_type;
-#endif
-
 #define SMS40     0x16
 #define RMU40     0x19
 #define MODBUS40  0x20
@@ -99,18 +95,16 @@ class NibeGw
     void sendNak();
     boolean shouldAckNakSend(byte address);
 
-    #ifdef ENABLE_NIBE_DEBUG
-    callback_debug_type debug;
-    char debug_buf[100];
-    #endif
+    const char* TAG = "nibeGW";
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
+    #define DEBUG_BUFFER_LEN 300
+    char debug_buf[DEBUG_BUFFER_LEN];
+#endif
+
 
   public:
     NibeGw(esphome::uart::UARTDevice* serial, esphome::GPIOPin* RS485DirectionPin);
     NibeGw& setCallback(callback_msg_received_type callback_msg_received, callback_msg_token_received_type callback_msg_token_received);
-
-    #ifdef ENABLE_NIBE_DEBUG
-    NibeGw& setDebugCallback(callback_debug_type debug);
-    #endif
 
     void connect();
     void disconnect();
