@@ -117,7 +117,7 @@ void NibeGw::loop()
 
 #ifdef ENABLE_NIBE_DEBUG
           if (debug)
-            debug(4, "\nFrame start found\n");
+            debug(4, "Frame start found");
 #endif
         }
       }
@@ -149,7 +149,7 @@ void NibeGw::loop()
 #ifdef ENABLE_NIBE_DEBUG
           if (debug)
           {
-            sprintf(debug_buf, "\ncheckMsg=%d\n", msglen);
+            sprintf(debug_buf, "checkMsg=%d", msglen);
             debug(5, debug_buf);
           }
 #endif
@@ -172,7 +172,7 @@ void NibeGw::loop()
     case STATE_CRC_FAILURE:
 #ifdef ENABLE_NIBE_DEBUG
       if (debug)
-        debug(1, "CRC failure\n");
+        debug(1, "CRC failure");
 #endif
       if (shouldAckNakSend(buffer[2]))
         sendNak();
@@ -189,7 +189,7 @@ void NibeGw::loop()
       {
 #ifdef ENABLE_NIBE_DEBUG
         if (debug)
-          debug(1, "Token received\n");
+          debug(1, "Token received");
 #endif
 
         int msglen = callback_msg_token_received((eTokenType)(buffer[3]), buffer);
@@ -201,7 +201,7 @@ void NibeGw::loop()
         {
 #ifdef ENABLE_NIBE_DEBUG
           if (debug)
-            debug(2, "No message to send\n");
+            debug(2, "No message to send");
 #endif
           sendAck();
         }
@@ -211,7 +211,7 @@ void NibeGw::loop()
 #ifdef ENABLE_NIBE_DEBUG
         if (debug)
         {
-          debug(1, "Message received\n");
+          debug(1, "Message received");
         }
 #endif
         sendAck();
@@ -255,7 +255,7 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len)
 
 #ifdef ENABLE_NIBE_DEBUG
       if (debug) {
-        sprintf(debug_buf, "\nchecksum=%02X, msg_checksum=%02X\n", checksum, msg_checksum);
+        sprintf(debug_buf, "checksum=%02X, msg_checksum=%02X", checksum, msg_checksum);
         debug(4, debug_buf);
       }
 #endif
@@ -303,7 +303,7 @@ void NibeGw::sendAck()
 {
 #ifdef ENABLE_NIBE_DEBUG
   if (debug)
-    debug(1, "Send ACK\n");
+    debug(1, "Send ACK");
 #endif
 
   if(directionPin)
@@ -320,7 +320,7 @@ void NibeGw::sendNak()
 {
 #ifdef ENABLE_NIBE_DEBUG
   if (debug)
-    debug(1, "Send NACK\n");
+    debug(1, "Send NACK");
 #endif
 
   if(directionPin)
