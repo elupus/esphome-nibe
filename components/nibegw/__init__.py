@@ -21,7 +21,6 @@ CONF_TARGET_PORT = "port"
 CONF_TARGET_IP = "ip"
 CONF_ACKNOWLEDGE = "acknowledge"
 CONF_UDP = "udp"
-CONF_DEBUG = "debug"
 
 CONF_ACKNOWLEDGE_MODBUS40 = "modbus40"
 CONF_ACKNOWLEDGE_RMU40 = "rmu40"
@@ -91,7 +90,6 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_ACKNOWLEDGE, default=[]): [cv.Any(addresses_string, cv.Coerce(int))],
         cv.Required(CONF_UDP): UDP_SCHEMA,
         cv.Optional(CONF_DIR_PIN): pins.gpio_output_pin_schema,
-        cv.Optional(CONF_DEBUG, default=False): cv.boolean,
         cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA)
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
@@ -109,9 +107,6 @@ async def to_code(config):
     )
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
-
-    if config[CONF_DEBUG]:
-        cg.add_build_flag("-DENABLE_NIBE_DEBUG")
 
     if CORE.is_esp32:
         cg.add_build_flag("-DHARDWARE_SERIAL_WITH_PINS")
