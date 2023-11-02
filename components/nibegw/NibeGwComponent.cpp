@@ -137,9 +137,10 @@ void NibeGwComponent::loop()
         is_connected_ = false;
     }
 
-    
-
-    do {
-        gw_->loop();
-    } while(gw_->messageStillOnProgress());
+    if (gw_->messageStillOnProgress()) {
+        high_freq_.start();
+    } else {
+        high_freq_.stop();
+    }
+    gw_->loop();
 }
