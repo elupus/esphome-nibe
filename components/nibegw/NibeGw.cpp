@@ -133,14 +133,12 @@ void NibeGw::loop()
           }
 
           if (msglen) {
-#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERY_VERBOSE
             for (byte i = 0; i < msglen && i < DEBUG_BUFFER_LEN/3; i++)
             {
               sprintf(debug_buf + i*3, "%02X ", buffer[i]);
             }
-            ESP_LOGV(TAG, "Message of %d bytes received from heat pump: %s", msglen, debug_buf);
-#else
-            ESP_LOGD(TAG, "Message of %d bytes received from heat pump", msglen);
+            ESP_LOGVV(TAG, "Message of %d bytes received from heat pump: %s", msglen, debug_buf);
 #endif
 
             callback_msg_received(buffer, index);
@@ -150,9 +148,9 @@ void NibeGw::loop()
       break;
 
     case STATE_CRC_FAILURE:
-      ESP_LOGW(TAG, "CRC failure");
       if (shouldAckNakSend(buffer[2]))
         sendNak();
+      ESP_LOGW(TAG, "Had CRC failure");
       state = STATE_WAIT_START;
       break;
 
@@ -164,17 +162,16 @@ void NibeGw::loop()
 
       if (buffer[0] == 0x5C && buffer[4] == 0x00)
       {
-        ESP_LOGD(TAG, "Token %02X received", buffer[3]);
-
         int msglen = callback_msg_token_received((eTokenType)(buffer[3]), buffer);
         if (msglen > 0)
         {
           sendData(buffer, (byte) msglen);
+          ESP_LOGVV(TAG, "Responded to token %02X", buffer[3]);
         }
         else
         {
-          ESP_LOGD(TAG, "No message to send");
           sendAck();
+          ESP_LOGVV(TAG, "Had no response to token %02X ", buffer[3]);
         }
       }
       else
@@ -237,16 +234,6 @@ int NibeGw::checkNibeMessage(const byte* const data, byte len)
 
 void NibeGw::sendData(const byte* const data, byte len)
 {
-#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
-  for (byte i = 0; i < len && i < DEBUG_BUFFER_LEN/3; i++)
-  {
-    sprintf(debug_buf + i*3, "%02X ", data[i]);
-  }
-  ESP_LOGV(TAG, "Send message of %d bytes to heat pump: %s", len, debug_buf);
-#else
-  ESP_LOGD(TAG, "Send message of %d bytes to heat pump", len);
-#endif
-
   if(directionPin)
     directionPin->digital_write(true);
   RS485->write_array(data, len);
@@ -254,12 +241,19 @@ void NibeGw::sendData(const byte* const data, byte len)
   esphome::delay(1);
   if(directionPin)
     directionPin->digital_write(false);
+
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERY_VERBOSE
+  for (byte i = 0; i < len && i < DEBUG_BUFFER_LEN/3; i++)
+  {
+    sprintf(debug_buf + i*3, "%02X ", data[i]);
+  }
+  ESP_LOGVV(TAG, "Sent message of %d bytes to heat pump: %s", len, debug_buf);
+#endif
+
 }
 
 void NibeGw::sendAck()
 {
-  ESP_LOGD(TAG, "Send ACK");
-
   if(directionPin)
     directionPin->digital_write(true);
   esphome::delay(1);
@@ -268,12 +262,11 @@ void NibeGw::sendAck()
   esphome::delay(1);
   if(directionPin)
     directionPin->digital_write(false);
+  ESP_LOGVV(TAG, "Sent ACK");
 }
 
 void NibeGw::sendNak()
 {
-  ESP_LOGD(TAG, "Send NACK");
-
   if(directionPin)
     directionPin->digital_write(true);
   esphome::delay(1);
@@ -282,6 +275,7 @@ void NibeGw::sendNak()
   esphome::delay(1);
   if(directionPin)
     directionPin->digital_write(false);
+  ESP_LOGVV(TAG, "Sent NACK");
 }
 
 boolean NibeGw::shouldAckNakSend(byte address)
