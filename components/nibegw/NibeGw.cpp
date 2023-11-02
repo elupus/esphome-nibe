@@ -78,7 +78,7 @@ boolean NibeGw::messageStillOnProgress()
   if ( RS485->available() > 0)
     return true;
 
-  if (state == STATE_CRC_FAILURE || state == STATE_OK_MESSAGE_RECEIVED)
+  if (state == STATE_CRC_FAILURE || state == STATE_OK_MESSAGE_RECEIVED || state == STATE_WAIT_DATA)
     return true;
 
   return false;

@@ -43,6 +43,7 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     std::vector<target_type> udp_targets_;
     std::map<request_key_type, std::queue<request_data_type>> requests_; 
     std::map<request_key_type, request_data_type>             requests_const_; 
+    HighFrequencyLoopRequester high_freq_;
 
     NibeGw* gw_;
 
