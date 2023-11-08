@@ -1,1 +1,4 @@
 *.pyc
+.esphome
+.vscode
+secrets.yaml

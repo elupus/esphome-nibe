@@ -10,6 +10,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
 #include "esphome/components/uart/uart.h"
+#include "esphome/components/number/number.h"
 
 #include "NibeGw.h"
 
@@ -50,6 +51,8 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     AsyncUDP udp_read_;
     AsyncUDP udp_write_;
 
+    number::Number *fake_temp_sensor;
+
     void callback_msg_received(const byte* const data, int len);
     int callback_msg_token_received(eTokenType token, byte* data);
     void callback_debug(byte verbose, char* data);
@@ -57,6 +60,12 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     void token_request_cache(AsyncUDPPacket& udp, byte address, byte token);
 
     public:
+
+    number::Number *get_fake_temp_sensor() const { return this->fake_temp_sensor; }
+
+    void set_fake_temp_sensor(number::Number *state) {
+        fake_temp_sensor = static_cast<number::Number *>(state);
+    }
 
     void set_read_port(int port) { udp_read_port_ = port; };
     void set_write_port(int port) { udp_write_port_ = port; };

@@ -74,7 +74,7 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
 {
 
     request_key_type key {data[2], static_cast<byte>(token)};
-
+    // request_key_type(address, token)
     {
         const auto& it = requests_.find(key);
         if (it != requests_.end()) {
@@ -89,11 +89,35 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
     }
 
     {
-        const auto& it = requests_const_.find(key);
-        if (it != requests_const_.end()) {
-            ESP_LOGD(TAG, "Constant to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key), it->second.size());
-            return copy_request(it->second, data);
+        // RMU40 temperature request from Nibe
+        if (std::get<0>(key) == 0x19 && std::get<1>(key) == 0x63) {
+
+            // don't ask my why actual temperature differs by .7 from set value. I simply fix this way....
+            unsigned int current_temp = get_fake_temp_sensor()->state * 10 + 7;
+            unsigned char temp_byte1 = current_temp;
+            unsigned char temp_byte2 = current_temp >> 8;
+            request_data_type fake_temp_data = {192, 96, 3, 6, temp_byte1, temp_byte2};
+
+            // calculate XOR checksum
+            byte checksum = 0;
+            for (int i = 0; i < 6; i++)
+                checksum ^= fake_temp_data[i];
+
+            ESP_LOGD(TAG, "Fake room +temperature to RMU40, temp=%d, checksum=%02X", current_temp, checksum);
+            fake_temp_data.push_back(checksum);
+            return copy_request(fake_temp_data, data);
+        } 
+
+        {
+            const auto& it = requests_const_.find(key);
+            if (it != requests_const_.end()) {
+                ESP_LOGD(TAG, "Constant to address: 0x%x token: 0x%x bytes: %d, second byte: %x", std::get<0>(key), std::get<1>(key), it->second.size(), it->second[1]);
+                for (auto val : it->second) ESP_LOGD(TAG, "0x%x", val);
+                // ESP_LOGD(TAG, "Constant to address: 0x%x token: 0x%x bytes: %d, second byte: %x", std::get<0>(key), std::get<1>(key), it->second.size(), it->second[1]);
+                return copy_request(it->second, data);
+            }
         }
+        
     }
 
     return 0;
