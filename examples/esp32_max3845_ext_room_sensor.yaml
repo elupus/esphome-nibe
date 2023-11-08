@@ -51,7 +51,10 @@ nibegw:
 
   # map any home assistant temperature sensor to act as RMU40 room 
   # temperature sensor. See sensor definition below.
-  rmu40_fake_temp_sensor_id: rmu40_fake_temp
+  remote_sensors:
+    - address: RMU40_S1
+      token: RMU_WRITE
+      id: rmu40_fake_temp
 
   acknowledge:
     - MODBUS40
