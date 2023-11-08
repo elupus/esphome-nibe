@@ -10,7 +10,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
 #include "esphome/components/uart/uart.h"
-#include "esphome/components/number/number.h"
+#include "esphome/components/homeassistant/sensor/homeassistant_sensor.h"
 
 #include "NibeGw.h"
 
@@ -51,7 +51,7 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     AsyncUDP udp_read_;
     AsyncUDP udp_write_;
 
-    number::Number *fake_temp_sensor;
+    homeassistant::HomeassistantSensor *fake_temp_sensor;
 
     void callback_msg_received(const byte* const data, int len);
     int callback_msg_token_received(eTokenType token, byte* data);
@@ -61,10 +61,10 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
 
     public:
 
-    number::Number *get_fake_temp_sensor() const { return this->fake_temp_sensor; }
+    homeassistant::HomeassistantSensor *get_fake_temp_sensor() const { return this->fake_temp_sensor; }
 
-    void set_fake_temp_sensor(number::Number *state) {
-        fake_temp_sensor = static_cast<number::Number *>(state);
+    void set_fake_temp_sensor(homeassistant::HomeassistantSensor *sensor) {
+        fake_temp_sensor = static_cast<homeassistant::HomeassistantSensor *>(sensor);
     }
 
     void set_read_port(int port) { udp_read_port_ = port; };

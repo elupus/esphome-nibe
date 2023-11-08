@@ -39,18 +39,6 @@ uart:
   tx_pin: GPIO17
   baud_rate: 9600
 
-# modbus:
-#   # id: modbus_brink
-#   send_wait_time: 200ms
-
-# modbus_controller:
-#   - id: nibe
-#     ## Brink Modbus slaveaddress 20
-#     address: 1 
-#     command_throttle: 200ms
-#     setup_priority: -10
-#     update_interval: 10s
-
 # Configure NibeGW
 nibegw:
   udp:
@@ -101,14 +89,6 @@ nibegw:
             0x00,
       ]
 
-    # Constant fixed temperature to avoid pump going into alarm.
-    # - address: RMU40_S1
-    #   token: RMU_WRITE
-    #   data: [
-    #         0x06, # Temperature
-    #         0xC8, # degrees low
-    #         0x00, # degrees high
-    #   ]
 
 # Some helper functions to restart ESPHome from HA
 button:
@@ -117,17 +97,10 @@ button:
   - platform: safe_mode
     name: Nibegw Safe Mode Boot
 
-number:
-  - id: rmu40_fake_temp
-    name: RMU40 Fake Temperature
-    platform: template
-    unit_of_measurement: "°C"    
-    min_value: 0
-    max_value: 50
-    step: 0.5
-    initial_value: 20
-    icon: mdi:home-thermometer
-    set_action:
-      then:
-        - lambda: |-
-            id(rmu40_fake_temp).publish_state(x);
+# Home Assistant Sensor - https://esphome.io/components/sensor/homeassistant.html
+# used to map any HA temperature sensor to pretend as RMU40 room temperature sensor.
+# sensor id must be passed to nibegw component
+sensor:
+  - platform: homeassistant
+    id: rmu40_fake_temp
+    entity_id: sensor.shellyplusht_08b61fcad31c_temperature
