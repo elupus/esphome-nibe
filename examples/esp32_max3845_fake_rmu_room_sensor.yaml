@@ -27,12 +27,10 @@ wifi:
     ssid: "Nibegw Fallback Hotspot"
     password: "FHFW89N6SHdb"
 
-captive_portal:
-
 # Load nibe component
 external_components:
-  # - source: github://elupus/esphome-nibe
-  - source: components
+  - source: github://elupus/esphome-nibe
+  # - source: components
 
 uart:
   rx_pin: GPIO16
@@ -45,12 +43,14 @@ nibegw:
     # The target address(s) to send data to. May be a multicast address.
     target:
       - ip: 192.168.8.147
-        port: 10090
+        # port: 10090
 
     # List of source address to accept data from, may be empty for no filter
     source:
       - 192.168.8.147
 
+  # map any home assistant temperature sensor to act as RMU40 room 
+  # temperature sensor. See sensor definition below.
   rmu40_fake_temp_sensor_id: rmu40_fake_temp
 
   acknowledge:
@@ -103,4 +103,4 @@ button:
 sensor:
   - platform: homeassistant
     id: rmu40_fake_temp
-    entity_id: sensor.shellyplusht_08b61fcad31c_temperature
+    entity_id: sensor.shellyplusht_08b61fcad31c_temperature # replace to your sensorId
