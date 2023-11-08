@@ -9,6 +9,7 @@ from esphome.core import CORE
 from esphome.components.network import IPAddress
 from enum import IntEnum, Enum
 from esphome.components import uart
+from esphome.components.homeassistant import sensor
 
 
 DEPENDENCIES = ["logger"]
@@ -33,7 +34,8 @@ CONF_TOKEN = "token"
 CONF_COMMAND = "command"
 CONF_DATA = "data"
 CONF_CONSTANTS = "constants"
-CONF_RMU40_FAKE_TEMP_SENSOR_ID = "rmu40_fake_temp_sensor_id"
+CONF_REMOTE_SENSORS = "remote_sensors"
+CONF_REMOTE_SENSOR_ID = "id"
 
 class Addresses(IntEnum):
     MODBUS40 = 0x20
@@ -69,6 +71,17 @@ CONSTANTS_SCHEMA = cv.Schema(
     }
 )
 
+REMOTE_SENSORS_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_ADDRESS): cv.Any(real_enum(Addresses), int),
+        cv.Required(CONF_TOKEN): cv.Any(real_enum(Token), int),
+        cv.Optional(CONF_COMMAND): cv.Any(real_enum(Token), int),
+        cv.Optional(CONF_DATA): [int],
+        cv.Required(CONF_REMOTE_SENSOR_ID): cv.use_id(float)
+        # cv.Required(CONF_REMOTE_SENSOR_ID): cv.string
+    }
+)
+
 TARGET_SCHEMA = cv.Schema(
     {
         cv.Required(CONF_TARGET_IP): cv.ipv4,
@@ -92,7 +105,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required(CONF_UDP): UDP_SCHEMA,
         cv.Optional(CONF_DIR_PIN): pins.gpio_output_pin_schema,
         cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA),
-        cv.Required(CONF_RMU40_FAKE_TEMP_SENSOR_ID): cv.use_id(float)
+        cv.Optional(CONF_REMOTE_SENSORS, default=[]): cv.ensure_list(REMOTE_SENSORS_SCHEMA)
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
@@ -164,5 +177,10 @@ async def to_code(config):
             data
         ))
     
-    fake_temp_sensor = await cg.get_variable(config[CONF_RMU40_FAKE_TEMP_SENSOR_ID])
-    cg.add(var.set_fake_temp_sensor(fake_temp_sensor))
+    for request in config[CONF_REMOTE_SENSORS]:
+        ext_sensor = await cg.get_variable(request[CONF_REMOTE_SENSOR_ID])
+        cg.add(var.set_remote_sensor_request(
+            request[CONF_ADDRESS],
+            request[CONF_TOKEN],
+            ext_sensor
+        ))

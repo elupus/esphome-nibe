@@ -42,8 +42,9 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     bool is_connected_ = false;
 
     std::vector<target_type> udp_targets_;
-    std::map<request_key_type, std::queue<request_data_type>> requests_; 
-    std::map<request_key_type, request_data_type>             requests_const_; 
+    std::map<request_key_type, std::queue<request_data_type>>       requests_;
+    std::map<request_key_type, request_data_type>                   requests_const_;
+    std::map<request_key_type, homeassistant::HomeassistantSensor*> remote_sensors_requests_;
     HighFrequencyLoopRequester high_freq_;
 
     NibeGw* gw_;
@@ -51,7 +52,7 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     AsyncUDP udp_read_;
     AsyncUDP udp_write_;
 
-    homeassistant::HomeassistantSensor *fake_temp_sensor;
+    // homeassistant::HomeassistantSensor *fake_temp_sensor;
 
     void callback_msg_received(const byte* const data, int len);
     int callback_msg_token_received(eTokenType token, byte* data);
@@ -61,10 +62,8 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
 
     public:
 
-    homeassistant::HomeassistantSensor *get_fake_temp_sensor() const { return this->fake_temp_sensor; }
-
-    void set_fake_temp_sensor(homeassistant::HomeassistantSensor *sensor) {
-        fake_temp_sensor = static_cast<homeassistant::HomeassistantSensor *>(sensor);
+    void set_remote_sensor_request(int address, int token, homeassistant::HomeassistantSensor *sensor) {
+        remote_sensors_requests_[request_key_type(address, token)] = static_cast<homeassistant::HomeassistantSensor *>(sensor);
     }
 
     void set_read_port(int port) { udp_read_port_ = port; };
