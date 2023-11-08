@@ -63,7 +63,7 @@ nibegw:
     source:
       - 192.168.8.147
 
-  fake_temp_sensor_id: fake_temp
+  rmu40_fake_temp_sensor_id: rmu40_fake_temp
 
   acknowledge:
     - MODBUS40
@@ -118,16 +118,16 @@ button:
     name: Nibegw Safe Mode Boot
 
 number:
-  - id: fake_temp
-    name: Fake Temperature
+  - id: rmu40_fake_temp
+    name: RMU40 Fake Temperature
     platform: template
     unit_of_measurement: "°C"    
     min_value: 0
     max_value: 50
     step: 0.5
     initial_value: 20
-    icon: mdi:home-export-outline
+    icon: mdi:home-thermometer
     set_action:
       then:
         - lambda: |-
-            id(fake_temp).publish_state(x);
+            id(rmu40_fake_temp).publish_state(x);

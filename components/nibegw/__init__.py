@@ -33,7 +33,7 @@ CONF_TOKEN = "token"
 CONF_COMMAND = "command"
 CONF_DATA = "data"
 CONF_CONSTANTS = "constants"
-CONF_FAKE_TEMP_SENSOR_ID = "fake_temp_sensor_id"
+CONF_RMU40_FAKE_TEMP_SENSOR_ID = "rmu40_fake_temp_sensor_id"
 
 class Addresses(IntEnum):
     MODBUS40 = 0x20
@@ -92,7 +92,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required(CONF_UDP): UDP_SCHEMA,
         cv.Optional(CONF_DIR_PIN): pins.gpio_output_pin_schema,
         cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA),
-        cv.Required(CONF_FAKE_TEMP_SENSOR_ID): cv.use_id(float)
+        cv.Required(CONF_RMU40_FAKE_TEMP_SENSOR_ID): cv.use_id(float)
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
@@ -164,5 +164,5 @@ async def to_code(config):
             data
         ))
     
-    fake_temp_sensor = await cg.get_variable(config[CONF_FAKE_TEMP_SENSOR_ID])
+    fake_temp_sensor = await cg.get_variable(config[CONF_RMU40_FAKE_TEMP_SENSOR_ID])
     cg.add(var.set_fake_temp_sensor(fake_temp_sensor))
