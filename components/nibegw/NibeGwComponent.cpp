@@ -98,18 +98,18 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
             unsigned char temp_byte1 = current_temp;
             unsigned char temp_byte2 = current_temp >> 8;
             request_data_type external_sensor_data = {
-                192,                        // 0xC0 - constant
-                std::get<1>(it->first),     // CONF_TOKEN
+                192,                        // Address: 0xC0 - constant
+                std::get<1>(key),           // Command or token
                 3,                          // len(data)
                 6,                          // 0x06, # Temperature
                 temp_byte1, temp_byte2};
 
             // calculate XOR checksum
             byte checksum = 0;
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < external_sensor_data.size(); i++)
                 checksum ^= external_sensor_data[i];
             external_sensor_data.push_back(checksum);
-            ESP_LOGD(TAG, "Fake room +temperature to RMU40, temp=%d, checksum=%02X", current_temp, checksum);
+            ESP_LOGD(TAG, "Fake room +temperature to RMU40, temp=%f, bytes: %d", it->second->state, external_sensor_data.size());
             return copy_request(external_sensor_data, data);            
         }
     }

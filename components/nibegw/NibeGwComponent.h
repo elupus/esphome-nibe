@@ -52,8 +52,6 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     AsyncUDP udp_read_;
     AsyncUDP udp_write_;
 
-    // homeassistant::HomeassistantSensor *fake_temp_sensor;
-
     void callback_msg_received(const byte* const data, int len);
     int callback_msg_token_received(eTokenType token, byte* data);
     void callback_debug(byte verbose, char* data);
