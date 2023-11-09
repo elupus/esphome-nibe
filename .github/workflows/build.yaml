@@ -1,0 +1,45 @@
+name: Build ESPHome firmware
+
+# Controls when the action will run. Triggers the workflow on push
+on: 
+  push:
+  pull_request:
+  release:
+        
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      mymatrix: ${{ steps.dataStep.outputs.myoutput }}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v3
+      - id: dataStep
+        run: |
+          TARGETS=$(ls examples/*.yaml | jq -R -s -c 'split("\n")[:-1]')
+          echo "myoutput=$(jq -cn --argjson environments $TARGETS '{target: $environments}')" >> $GITHUB_OUTPUT
+  run-matrix:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.setup.outputs.mymatrix) }}
+    steps:
+      - run: echo ${{matrix.target}}
+      - name: "Checkout"
+        uses: actions/checkout@v3
+      - name: "Patch config to test local component"
+        run: |
+          echo "Replace !secrets to some dummy string"
+          sed -i 's/!secret.*/Dummy123/g' ${{matrix.target}}
+          echo "Use local component for build"
+          sed -i 's/type: git/type: local/g' ${{matrix.target}}
+          sed -i 's/url: https:\/\/github.*/path: ..\/components/g' ${{matrix.target}}
+          sed -i 's/source: github.*/source: ..\/components/g' ${{matrix.target}}
+          echo "Remove encryption key"
+          sed -i '/encryption:/,+2d' ${{matrix.target}}
+          cat ${{matrix.target}}
+      - name: "Build"
+        uses: esphome/build-action@v1.8.0
+        id: esphome-build-esp32
+        with:
+          yaml_file: ${{matrix.target}}
