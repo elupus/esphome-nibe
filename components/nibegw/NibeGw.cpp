@@ -98,11 +98,12 @@ void NibeGw::loop()
         ESP_LOGVV(TAG, "%02X", b);
 
         buffer[0] = buffer[1];
-        buffer[1] = b;
+		buffer[1] = buffer[2];
+        buffer[2] = b;
 
-        if (buffer[0] == 0x5C && buffer[1] != 0x5C)
+        if (buffer[0] == 0x5C && buffer[1] == 0x00 && shouldAckNakSend(buffer[2]))
         {
-          index = 2;
+          index = 3;
           state = STATE_WAIT_DATA;
           ESP_LOGVV(TAG, "Frame start found");
         }
