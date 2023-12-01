@@ -100,11 +100,20 @@ void NibeGw::loop()
         buffer[0] = buffer[1];
         buffer[1] = b;
 
-        if (buffer[0] == 0x5C && buffer[1] != 0x5C)
+        if (buffer[0] == 0x5C)
         {
-          index = 2;
-          state = STATE_WAIT_DATA;
-          ESP_LOGVV(TAG, "Frame start found");
+          if (buffer[1] == 0x5C)
+          {
+            buffer[1] = 0x00;
+            state = STATE_WAIT_START;
+            ESP_LOGVV(TAG, "Ignore double start");
+          }
+          else
+          {
+            index = 2;
+            state = STATE_WAIT_DATA;
+            ESP_LOGVV(TAG, "Frame start found");
+          }
         }
       }
       break;
