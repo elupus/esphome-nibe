@@ -74,7 +74,7 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
 {
 
     request_key_type key {data[2], static_cast<byte>(token)};
-
+    // request_key_type(address, token)
     {
         const auto& it = requests_.find(key);
         if (it != requests_.end()) {
@@ -85,6 +85,32 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
                 ESP_LOGD(TAG, "Response to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key), len);
                 return len;
             }
+        }
+    }
+
+    // RMU40 temperature request from Nibe
+    {
+        const auto& it = remote_sensors_requests_.find(key);
+        if (it != remote_sensors_requests_.end()) {
+            // ESP_LOGD(TAG, "Constant to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key), it->second.size());
+            // return copy_request(it->second, data);
+            unsigned int current_temp = it->second->state * 10 + 7;
+            unsigned char temp_byte1 = current_temp;
+            unsigned char temp_byte2 = current_temp >> 8;
+            request_data_type external_sensor_data = {
+                192,                        // Address: 0xC0 - constant
+                std::get<1>(key),           // Command or token
+                3,                          // len(data)
+                6,                          // 0x06, # Temperature
+                temp_byte1, temp_byte2};
+
+            // calculate XOR checksum
+            byte checksum = 0;
+            for (int i = 0; i < external_sensor_data.size(); i++)
+                checksum ^= external_sensor_data[i];
+            external_sensor_data.push_back(checksum);
+            ESP_LOGD(TAG, "Fake room +temperature to RMU40, temp=%f, bytes: %d", it->second->state, external_sensor_data.size());
+            return copy_request(external_sensor_data, data);            
         }
     }
 

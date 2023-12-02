@@ -10,6 +10,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
 #include "esphome/components/uart/uart.h"
+#include "esphome/components/homeassistant/sensor/homeassistant_sensor.h"
 
 #include "NibeGw.h"
 
@@ -41,8 +42,9 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     bool is_connected_ = false;
 
     std::vector<target_type> udp_targets_;
-    std::map<request_key_type, std::queue<request_data_type>> requests_; 
-    std::map<request_key_type, request_data_type>             requests_const_; 
+    std::map<request_key_type, std::queue<request_data_type>>       requests_;
+    std::map<request_key_type, request_data_type>                   requests_const_;
+    std::map<request_key_type, homeassistant::HomeassistantSensor*> remote_sensors_requests_;
     HighFrequencyLoopRequester high_freq_;
 
     NibeGw* gw_;
@@ -57,6 +59,10 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     void token_request_cache(AsyncUDPPacket& udp, byte address, byte token);
 
     public:
+
+    void set_remote_sensor_request(int address, int token, homeassistant::HomeassistantSensor *sensor) {
+        remote_sensors_requests_[request_key_type(address, token)] = static_cast<homeassistant::HomeassistantSensor *>(sensor);
+    }
 
     void set_read_port(int port) { udp_read_port_ = port; };
     void set_write_port(int port) { udp_write_port_ = port; };

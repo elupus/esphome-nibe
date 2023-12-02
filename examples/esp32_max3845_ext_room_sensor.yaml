@@ -1,0 +1,109 @@
+esphome:
+  name: nibegw
+  friendly_name: nibegw
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "mscyRrmJhRNSFVVIfCCeug5pX5ZP80/IfPPjsGuW9K8="
+
+ota:
+  password: "6d7782bf8dde5c2a5a45d808a82a3e4a"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Nibegw Fallback Hotspot"
+    password: "FHFW89N6SHdb"
+
+# Load nibe component
+external_components:
+  - source: github://elupus/esphome-nibe
+  # - source: components
+
+uart:
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  baud_rate: 9600
+
+# Configure NibeGW
+nibegw:
+  udp:
+    # The target address(s) to send data to. May be a multicast address.
+    target:
+      - ip: 192.168.8.147
+        # port: 10090
+
+    # List of source address to accept data from, may be empty for no filter
+    source:
+      - 192.168.8.147
+
+  # map any home assistant temperature sensor to act as RMU40 room 
+  # temperature sensor. See sensor definition below.
+  remote_sensors:
+    - address: RMU40_S1
+      token: RMU_WRITE
+      id: rmu40_fake_temp
+
+  acknowledge:
+    - MODBUS40
+
+    # Enable a dummy RMU40 accessory to receive updates
+    # to certain registers faster. This should not be
+    # enabled if you have an actual RMU40.
+    - RMU40_S1
+
+  # Constant replies to certain requests can be made
+  constants:
+    - address: MODBUS40
+      token: ACCESSORY
+      data: [
+            0x0A, # MODBUS version low
+            0x00, # MODBUS version high
+            0x02, # MODBUS address?
+      ]
+
+    # Accessory version response
+    - address: RMU40_S1
+      token: ACCESSORY
+      data: [
+            0xEE, # RMU ?
+            0x03, # RMU version low
+            0x01, # RMU version high
+      ]
+
+    # Unknown response that nibepi uses
+    - address: RMU40_S1
+      token: RMU_DATA
+      command: RMU_WRITE
+      data: [
+            0x63,
+            0x00,
+      ]
+
+
+# Some helper functions to restart ESPHome from HA
+button:
+  - platform: restart
+    name: Nibegw Restart
+  - platform: safe_mode
+    name: Nibegw Safe Mode Boot
+
+# Home Assistant Sensor - https://esphome.io/components/sensor/homeassistant.html
+# used to map any HA temperature sensor to pretend as RMU40 room temperature sensor.
+# sensor id must be passed to nibegw component
+sensor:
+  - platform: homeassistant
+    id: rmu40_fake_temp
+    entity_id: sensor.shellyplusht_08b61fcad31c_temperature # replace to your sensorId

@@ -1,1 +1,5 @@
 *.pyc
+.esphome
+.vscode
+secrets.yaml
+nibegw-fake-temp.yaml
