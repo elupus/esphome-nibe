@@ -24,11 +24,12 @@
 #include "ESPAsyncUDP.h"
 #endif
 
-using namespace esphome;
-
+namespace esphome {
+namespace nibegw {
 
 typedef std::tuple<byte, byte>  request_key_type;
 typedef std::vector<byte>       request_data_type;
+typedef std::function<request_data_type (void)> request_provider_type;
 typedef std::tuple<network::IPAddress, int> target_type;
 
 class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevice {
@@ -42,7 +43,7 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
 
     std::vector<target_type> udp_targets_;
     std::map<request_key_type, std::queue<request_data_type>> requests_; 
-    std::map<request_key_type, request_data_type>             requests_const_; 
+    std::map<request_key_type, request_provider_type>         requests_provider_;
     HighFrequencyLoopRequester high_freq_;
 
     NibeGw* gw_;
@@ -71,9 +72,16 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
         udp_source_ip_.push_back(ip);
     };
 
-    void set_const_request(int address, int token, request_data_type request)
+    void set_request(int address, int token, request_data_type request)
     {
-        requests_const_[request_key_type(address, token)] = std::move(request);
+        set_request(address, token, [request]{
+            return request;
+        });
+    }
+
+    void set_request(int address, int token, request_provider_type provider)
+    {
+        requests_provider_[request_key_type(address, token)] = provider;
     }
 
     void add_queued_request(int address, int token, request_data_type request)
@@ -93,3 +101,6 @@ class NibeGwComponent: public esphome::Component, public esphome::uart::UARTDevi
     void dump_config();
     void loop();
 };
+
+}  // namespace nibegw
+}  // namespace esphome
