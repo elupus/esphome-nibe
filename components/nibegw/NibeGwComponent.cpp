@@ -73,7 +73,7 @@ static int copy_request(const request_data_type& request, byte* data)
 int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
 {
 
-    request_key_type key {data[2], static_cast<byte>(token)};
+    request_key_type key {data[2] | (data[1] << 8), static_cast<byte>(token)};
 
     {
         const auto& it = requests_.find(key);
