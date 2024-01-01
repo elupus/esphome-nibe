@@ -46,7 +46,7 @@ enum RmuDataFlagsBits {
 
 request_data_type write_token(byte token, request_data_type payload) {
   request_data_type data = {
-      STARTBYTE_REPLY,
+      STARTBYTE_SLAVE,
       token,
       (byte) payload.size(),
   };
