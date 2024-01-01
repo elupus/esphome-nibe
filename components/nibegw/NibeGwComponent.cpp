@@ -17,16 +17,16 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin* dir_pin)
     });
 }
 
-request_data_type dedup (const byte* const data, int len, byte val)
+static request_data_type dedup (const byte* const data, int len, byte val)
 {
     request_data_type message;
-    byte value = 0;
+    byte value = ~val;
     for (int i = 5; i < len - 1; i++)
     {
         if (data[i] == val && value == val)
         {
-            value = 0;
-            continue;;
+            value = ~val;
+            continue;
         }
         value = data[i]; 
         message.push_back(value);
