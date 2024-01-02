@@ -142,7 +142,7 @@ void NibeGwClimate::publish_current(float value) {
 
 void NibeGwClimate::publish_target(float value) {
   if (!isnan(value)) {
-    auto data = set_u8_decimal(value, 0.1, 0);
+    auto data = set_s16_decimal(value, 0.1, 0);
     data_[RMU_WRITE_INDEX_SETPOINT_S1 + this->index_ * 2] = data;
     ESP_LOGI(TAG, "Publishing to rmu: 0x%x target: %f -> %s", address_, value, format_hex_pretty(data).c_str());
   }
