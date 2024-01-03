@@ -1,6 +1,7 @@
 #include "NibeGwComponent.h"
 
-using namespace esphome;
+namespace esphome {
+namespace nibegw {
 
 NibeGwComponent::NibeGwComponent(esphome::GPIOPin* dir_pin)
 {
@@ -16,8 +17,33 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin* dir_pin)
     });
 }
 
+static request_data_type dedup (const byte* const data, int len, byte val)
+{
+    request_data_type message;
+    byte value = ~val;
+    for (int i = 5; i < len - 1; i++)
+    {
+        if (data[i] == val && value == val)
+        {
+            value = ~val;
+            continue;
+        }
+        value = data[i]; 
+        message.push_back(value);
+    }
+    return message;
+}
+
 void NibeGwComponent::callback_msg_received(const byte* const data, int len)
 {
+    {
+        request_key_type key {data[2] | (data[1] << 8), static_cast<byte>(data[3])};
+        const auto& it = message_listener_.find(key);
+        if (it != message_listener_.end()) {
+            it->second(dedup(data, len, STARTBYTE_MASTER));
+        }
+    }
+
     if (!is_connected_) {
         return;
     }
@@ -73,7 +99,7 @@ static int copy_request(const request_data_type& request, byte* data)
 int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
 {
 
-    request_key_type key {data[2], static_cast<byte>(token)};
+    request_key_type key {data[2] | (data[1] << 8), static_cast<byte>(token)};
 
     {
         const auto& it = requests_.find(key);
@@ -89,10 +115,11 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte* data)
     }
 
     {
-        const auto& it = requests_const_.find(key);
-        if (it != requests_const_.end()) {
-            ESP_LOGD(TAG, "Constant to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key), it->second.size());
-            return copy_request(it->second, data);
+        const auto& it = requests_provider_.find(key);
+        if (it != requests_provider_.end()) {
+            auto len = copy_request(it->second(), data);
+            ESP_LOGD(TAG, "Response to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key), len);
+            return len;
         }
     }
 
@@ -144,3 +171,6 @@ void NibeGwComponent::loop()
     }
     gw_->loop();
 }
+
+}  // namespace nibegw
+}  // namespace esphome

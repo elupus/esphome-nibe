@@ -52,6 +52,7 @@ enum eState
 {
   STATE_WAIT_START,
   STATE_WAIT_DATA,
+  STATE_WAIT_ACK,
   STATE_OK_MESSAGE_RECEIVED,
   STATE_CRC_FAILURE,
 };
@@ -61,10 +62,19 @@ enum eTokenType
   READ_TOKEN = 0x69,
   WRITE_TOKEN = 0x6B,
   RMU_WRITE_TOKEN = 0x60,
+  RMU_DATA_MSG = 0x62,
   RMU_DATA_TOKEN = 0x63,
   ACCESSORY_TOKEN = 0xEE,
 };
-    
+
+enum eStartByte
+{
+  STARTBYTE_MASTER = 0x5c,
+  STARTBYTE_SLAVE = 0xc0,
+  STARTBYTE_ACK = 0x06,
+  STARTBYTE_NACK = 0x15,
+};
+
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
 #define MAX_DATA_LEN 128
 
@@ -73,6 +83,10 @@ typedef std::function<int(eTokenType token, byte* data)> callback_msg_token_rece
 
 #define SMS40     0x16
 #define RMU40     0x19
+#define RMU40_S1  0x19
+#define RMU40_S2  0x1A
+#define RMU40_S3  0x1B
+#define RMU40_S4  0x1C
 #define MODBUS40  0x20
 
 class NibeGw
