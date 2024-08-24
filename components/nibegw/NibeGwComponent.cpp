@@ -13,7 +13,30 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin *dir_pin) {
   udp_write_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, WRITE_TOKEN); });
 }
 
+request_data_type dedup(const byte *const data, int len, byte val) {
+  request_data_type message;
+  byte value = 0;
+  for (int i = 5; i < len - 1; i++) {
+    if (data[i] == val && value == val) {
+      value = 0;
+      continue;
+      ;
+    }
+    value = data[i];
+    message.push_back(value);
+  }
+  return message;
+}
+
 void NibeGwComponent::callback_msg_received(const byte *const data, int len) {
+  {
+    request_key_type key{data[2] | (data[1] << 8), static_cast<byte>(data[3])};
+    const auto &it = message_listener_.find(key);
+    if (it != message_listener_.end()) {
+      it->second(dedup(data, len, STARTBYTE_MASTER));
+    }
+  }
+
   if (!is_connected_) {
     return;
   }
