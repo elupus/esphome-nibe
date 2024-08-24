@@ -18,11 +18,11 @@
  * +----+----+------+-----+-----+----+----+-----+
  *           |------------ CHK -----------|
  *
- *  Address: 
+ *  Address:
  *    0x16 = SMS40
  *    0x19 = RMU40
  *    0x20 = MODBUS40
- * 
+ *
  *  Checksum: XOR
  *
  * When valid data is received (checksum ok),
@@ -44,12 +44,11 @@
 
 using namespace esphome;
 
-//#define HARDWARE_SERIAL_WITH_PINS
-//#define HARDWARE_SERIAL
+// #define HARDWARE_SERIAL_WITH_PINS
+// #define HARDWARE_SERIAL
 
 // state machine states
-enum eState
-{
+enum eState {
   STATE_WAIT_START,
   STATE_WAIT_DATA,
   STATE_WAIT_ACK,
@@ -57,74 +56,77 @@ enum eState
   STATE_CRC_FAILURE,
 };
 
-enum eTokenType
-{
+enum eTokenType {
   READ_TOKEN = 0x69,
   WRITE_TOKEN = 0x6B,
   RMU_WRITE_TOKEN = 0x60,
   RMU_DATA_TOKEN = 0x63,
   ACCESSORY_TOKEN = 0xEE,
 };
-    
+
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
 #define MAX_DATA_LEN 128
 
-typedef std::function<void(const byte* const data, int len)> callback_msg_received_type;
-typedef std::function<int(eTokenType token, byte* data)> callback_msg_token_received_type;
+typedef std::function<void(const byte *const data, int len)> callback_msg_received_type;
+typedef std::function<int(eTokenType token, byte *data)> callback_msg_token_received_type;
 
-#define SMS40     0x16
-#define RMU40     0x19
-#define MODBUS40  0x20
+#define SMS40 0x16
+#define RMU40 0x19
+#define MODBUS40 0x20
 
-class NibeGw
-{
-  private:
-    eState state;
-    boolean connectionState;
-    esphome::GPIOPin* directionPin;
-    byte buffer[MAX_DATA_LEN];
-    byte index;
-    esphome::uart::UARTDevice* RS485;
-    callback_msg_received_type callback_msg_received;
-    callback_msg_token_received_type callback_msg_token_received;
-    std::set<byte> addressAcknowledge;
-    boolean sendAcknowledge;
+class NibeGw {
+ private:
+  eState state;
+  boolean connectionState;
+  esphome::GPIOPin *directionPin;
+  byte buffer[MAX_DATA_LEN];
+  byte index;
+  esphome::uart::UARTDevice *RS485;
+  callback_msg_received_type callback_msg_received;
+  callback_msg_token_received_type callback_msg_token_received;
+  std::set<byte> addressAcknowledge;
+  boolean sendAcknowledge;
 
-    int checkNibeMessage(const byte* const data, byte len);
-    void sendData(const byte* const data, byte len);
-    void sendAck();
-    void sendNak();
-    boolean shouldAckNakSend(byte address);
+  int checkNibeMessage(const byte *const data, byte len);
+  void sendData(const byte *const data, byte len);
+  void sendAck();
+  void sendNak();
+  boolean shouldAckNakSend(byte address);
 
-    const char* TAG = "nibeGW";
+  const char *TAG = "nibeGW";
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
-    #define DEBUG_BUFFER_LEN 300
-    char debug_buf[DEBUG_BUFFER_LEN];
+#define DEBUG_BUFFER_LEN 300
+  char debug_buf[DEBUG_BUFFER_LEN];
 #endif
 
+ public:
+  NibeGw(esphome::uart::UARTDevice *serial, esphome::GPIOPin *RS485DirectionPin);
+  NibeGw &setCallback(callback_msg_received_type callback_msg_received,
+                      callback_msg_token_received_type callback_msg_token_received);
 
-  public:
-    NibeGw(esphome::uart::UARTDevice* serial, esphome::GPIOPin* RS485DirectionPin);
-    NibeGw& setCallback(callback_msg_received_type callback_msg_received, callback_msg_token_received_type callback_msg_token_received);
+  void connect();
+  void disconnect();
+  boolean connected();
+  boolean messageStillOnProgress();
+  void loop();
 
-    void connect();
-    void disconnect();
-    boolean connected();
-    boolean messageStillOnProgress();
-    void loop();
+  void setAcknowledge(byte address, boolean val) {
+    if (val)
+      addressAcknowledge.insert(address);
+    else
+      addressAcknowledge.erase(address);
+  }
 
-    void setAcknowledge(byte address, boolean val)
-    {
-      if (val)
-        addressAcknowledge.insert(address);
-      else
-        addressAcknowledge.erase(address);
-    }
-
-    void setAckModbus40Address(boolean val) { setAcknowledge(MODBUS40, val); }
-    void setAckSms40Address(boolean val) { setAcknowledge(SMS40, val); }
-    void setAckRmu40Address(boolean val) { setAcknowledge(RMU40, val); }
-    void setSendAcknowledge(boolean val );
+  void setAckModbus40Address(boolean val) {
+    setAcknowledge(MODBUS40, val);
+  }
+  void setAckSms40Address(boolean val) {
+    setAcknowledge(SMS40, val);
+  }
+  void setAckRmu40Address(boolean val) {
+    setAcknowledge(RMU40, val);
+  }
+  void setSendAcknowledge(boolean val);
 };
 
 #endif
