@@ -88,8 +88,8 @@ void NibeGw::loop() {
         buffer[0] = buffer[1];
         buffer[1] = b;
 
-        if (buffer[0] == 0x5C) {
-          if (buffer[1] == 0x5C) {
+        if (buffer[0] == STARTBYTE_MASTER) {
+          if (buffer[1] == STARTBYTE_MASTER) {
             buffer[1] = 0x00;
             state = STATE_WAIT_START;
             ESP_LOGVV(TAG, "Ignore double start");
@@ -107,9 +107,9 @@ void NibeGw::loop() {
         byte b = RS485->read();
         ESP_LOGVV(TAG, "%02X", b);
 
-        if (b == 0x06) {
+        if (b == STARTBYTE_ACK) {
           ESP_LOGV(TAG, "Ack seen");
-        } else if (b == 0x15) {
+        } else if (b == STARTBYTE_NACK) {
           ESP_LOGV(TAG, "Nack seen");
         } else {
           ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
@@ -175,7 +175,7 @@ void NibeGw::loop() {
       }
 
       state = STATE_WAIT_START;
-      if (buffer[0] == 0x5C && buffer[4] == 0x00) {
+      if (buffer[0] == STARTBYTE_MASTER && buffer[4] == 0x00) {
         int msglen = callback_msg_token_received((eTokenType) (buffer[3]), buffer);
         if (msglen > 0) {
           sendData(buffer, (byte) msglen);
@@ -204,7 +204,7 @@ int NibeGw::checkNibeMessage(const byte *const data, byte len) {
     return 0;
 
   if (len >= 1) {
-    if (data[0] != 0x5C)
+    if (data[0] != STARTBYTE_MASTER)
       return -1;
 
     if (len >= 6) {
@@ -258,7 +258,7 @@ void NibeGw::sendAck() {
   if (directionPin)
     directionPin->digital_write(true);
   esphome::delay(1);
-  RS485->write_byte(0x06);
+  RS485->write_byte(STARTBYTE_ACK);
   RS485->flush();
   esphome::delay(1);
   if (directionPin)
@@ -270,7 +270,7 @@ void NibeGw::sendNak() {
   if (directionPin)
     directionPin->digital_write(true);
   esphome::delay(1);
-  RS485->write(0x15);
+  RS485->write(STARTBYTE_NACK);
   RS485->flush();
   esphome::delay(1);
   if (directionPin)
