@@ -237,14 +237,25 @@ int NibeGw::checkNibeMessage(const byte *const data, byte len) {
   return 0;
 }
 
-void NibeGw::sendData(const byte *const data, byte len) {
-  if (directionPin)
+void NibeGw::sendBegin() {
+  if (directionPin) {
     directionPin->digital_write(true);
-  RS485->write_array(data, len);
+    esphome::delay(1);
+  }
+}
+
+void NibeGw::sendEnd() {
   RS485->flush();
-  esphome::delay(1);
-  if (directionPin)
+  if (directionPin) {
+    esphome::delay(1);
     directionPin->digital_write(false);
+  }
+}
+
+void NibeGw::sendData(const byte *const data, byte len) {
+  sendBegin();
+  RS485->write_array(data, len);
+  sendEnd();
 
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERY_VERBOSE
   for (byte i = 0; i < len && i < DEBUG_BUFFER_LEN / 3; i++) {
@@ -255,26 +266,16 @@ void NibeGw::sendData(const byte *const data, byte len) {
 }
 
 void NibeGw::sendAck() {
-  if (directionPin)
-    directionPin->digital_write(true);
-  esphome::delay(1);
+  sendBegin();
   RS485->write_byte(STARTBYTE_ACK);
-  RS485->flush();
-  esphome::delay(1);
-  if (directionPin)
-    directionPin->digital_write(false);
+  sendEnd();
   ESP_LOGVV(TAG, "Sent ACK");
 }
 
 void NibeGw::sendNak() {
-  if (directionPin)
-    directionPin->digital_write(true);
-  esphome::delay(1);
-  RS485->write(STARTBYTE_NACK);
-  RS485->flush();
-  esphome::delay(1);
-  if (directionPin)
-    directionPin->digital_write(false);
+  sendBegin();
+  RS485->write_byte(STARTBYTE_NACK);
+  sendEnd();
   ESP_LOGVV(TAG, "Sent NACK");
 }
 

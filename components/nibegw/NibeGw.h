@@ -98,6 +98,8 @@ class NibeGw {
   void sendData(const byte *const data, byte len);
   void sendAck();
   void sendNak();
+  void sendBegin();
+  void sendEnd();
   boolean shouldAckNakSend(byte address);
 
   const char *TAG = "nibeGW";
