@@ -16,7 +16,8 @@ api:
     key: !secret api_password
 
 ota:
-  password: !secret ota_password
+  - platform: esphome
+    password: !secret ota_password
 
 wifi:
   power_save_mode: none
