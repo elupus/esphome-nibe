@@ -146,6 +146,20 @@ nibegw:
             0x14, # degrees low
             0x00, # degrees high
       ]
+
+# Add a virtual RMU on S3
+climate:
+  - platform: nibegw
+    name: s3
+    address: RMU40_S3
+    sensor: current_temperature_s3
+
+# Add a temperature sensor taken from home assistant to use for virtual RMU
+sensor:
+  - platform: homeassistant
+    id: current_temperature_s3
+    entity_id: sensor.current_temperature_s3
+  
 ```
 
 ## Parsing
