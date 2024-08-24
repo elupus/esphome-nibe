@@ -30,6 +30,7 @@ typedef std::tuple<byte, byte> request_key_type;
 typedef std::vector<byte> request_data_type;
 typedef std::function<request_data_type(void)> request_provider_type;
 typedef std::tuple<network::IPAddress, int> target_type;
+typedef std::function<void(const request_data_type &)> message_listener_type;
 
 class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDevice {
   float get_setup_priority() const override {
@@ -45,6 +46,7 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   std::vector<target_type> udp_targets_;
   std::map<request_key_type, std::queue<request_data_type>> requests_;
   std::map<request_key_type, request_provider_type> requests_provider_;
+  std::map<request_key_type, message_listener_type> message_listener_;
   HighFrequencyLoopRequester high_freq_;
 
   NibeGw *gw_;
@@ -81,6 +83,10 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
 
   void set_request(int address, int token, request_provider_type provider) {
     requests_provider_[request_key_type(address, token)] = provider;
+  }
+
+  void add_listener(int address, int token, message_listener_type listener) {
+    message_listener_[request_key_type(address, token)] = listener;
   }
 
   void add_queued_request(int address, int token, request_data_type request) {
