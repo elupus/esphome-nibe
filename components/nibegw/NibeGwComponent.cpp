@@ -1,6 +1,7 @@
 #include "NibeGwComponent.h"
 
-using namespace esphome;
+namespace esphome {
+namespace nibegw {
 
 NibeGwComponent::NibeGwComponent(esphome::GPIOPin *dir_pin) {
   gw_ = new NibeGw(this, dir_pin);
@@ -77,11 +78,11 @@ int NibeGwComponent::callback_msg_token_received(eTokenType token, byte *data) {
   }
 
   {
-    const auto &it = requests_const_.find(key);
-    if (it != requests_const_.end()) {
-      ESP_LOGD(TAG, "Constant to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key),
-               it->second.size());
-      return copy_request(it->second, data);
+    const auto &it = requests_provider_.find(key);
+    if (it != requests_provider_.end()) {
+      auto len = copy_request(it->second(), data);
+      ESP_LOGD(TAG, "Response to address: 0x%x token: 0x%x bytes: %d", std::get<0>(key), std::get<1>(key), len);
+      return len;
     }
   }
 
@@ -127,3 +128,6 @@ void NibeGwComponent::loop() {
   }
   gw_->loop();
 }
+
+}  // namespace nibegw
+}  // namespace esphome

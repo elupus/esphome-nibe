@@ -13,7 +13,8 @@ from esphome.components import uart
 
 DEPENDENCIES = ["logger"]
 
-NibeGwComponent = cg.global_ns.class_("NibeGwComponent", cg.Component, uart.UARTDevice)
+nibegw_ns = cg.esphome_ns.namespace("nibegw")
+NibeGwComponent = nibegw_ns.class_("NibeGwComponent", cg.Component, uart.UARTDevice)
 
 CONF_DIR_PIN = "dir_pin"
 CONF_TARGET = "target"
@@ -156,7 +157,7 @@ async def to_code(config):
             request.get(CONF_COMMAND, request[CONF_TOKEN]).enum_value,
             request[CONF_DATA]
         )
-        cg.add(var.set_const_request(
+        cg.add(var.set_request(
             request[CONF_ADDRESS],
             request[CONF_TOKEN],
             data
