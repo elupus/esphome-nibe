@@ -80,6 +80,10 @@ typedef std::function<int(eTokenType token, byte *data)> callback_msg_token_rece
 
 #define SMS40 0x16
 #define RMU40 0x19
+#define RMU40_S1 0x19
+#define RMU40_S2 0x1A
+#define RMU40_S3 0x1B
+#define RMU40_S4 0x1C
 #define MODBUS40 0x20
 
 class NibeGw {
