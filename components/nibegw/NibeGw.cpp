@@ -118,6 +118,30 @@ void NibeGw::loop()
       }
       break;
 
+    case STATE_WAIT_ACK:
+      if (RS485->available() > 0)
+      {
+        byte b = RS485->read();
+        ESP_LOGVV(TAG, "%02X", b);
+
+        if (b == 0x06)
+        {
+          ESP_LOGV(TAG, "Ack seen");
+        }
+        else if (b == 0x15)
+        {
+          ESP_LOGV(TAG, "Nack seen");
+        }
+        else
+        {
+          ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
+        }
+
+        state = STATE_WAIT_START;
+        buffer[1] = b;
+      }
+      break;
+
     case STATE_WAIT_DATA:
       if (RS485->available() > 0)
       {
@@ -171,12 +195,14 @@ void NibeGw::loop()
         break;
       }
 
+      state = STATE_WAIT_START;
       if (buffer[0] == 0x5C && buffer[4] == 0x00)
       {
         int msglen = callback_msg_token_received((eTokenType)(buffer[3]), buffer);
         if (msglen > 0)
         {
           sendData(buffer, (byte) msglen);
+          state = STATE_WAIT_ACK;
           ESP_LOGVV(TAG, "Responded to token %02X", buffer[3]);
         }
         else
@@ -189,7 +215,6 @@ void NibeGw::loop()
       {
         sendAck();
       }
-      state = STATE_WAIT_START;
       break;
   }
 }
