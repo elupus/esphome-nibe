@@ -64,6 +64,13 @@ enum eTokenType {
   ACCESSORY_TOKEN = 0xEE,
 };
 
+enum eStartByte {
+  STARTBYTE_MASTER = 0x5c,
+  STARTBYTE_SLAVE = 0xc0,
+  STARTBYTE_ACK = 0x06,
+  STARTBYTE_NACK = 0x15,
+};
+
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
 #define MAX_DATA_LEN 128
 
