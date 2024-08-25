@@ -10,7 +10,7 @@ from esphome.components.network import IPAddress
 from enum import IntEnum, Enum
 from esphome.components import uart
 
-
+AUTO_LOAD = ["sensor", "climate"]
 DEPENDENCIES = ["logger"]
 
 nibegw_ns = cg.esphome_ns.namespace("nibegw")
