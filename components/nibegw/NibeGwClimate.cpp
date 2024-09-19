@@ -26,7 +26,7 @@ enum RmuWriteIndex {
   RMU_WRITE_INDEX_END = RMU_WRITE_INDEX_SETPOINT_S4 + 1
 };
 
-#define RMU_WRITE_INDEX_SETPOINT_SX(index) (RMU_WRITE_INDEX_SETPOINT_S1 + (index) *2)
+#define RMU_WRITE_INDEX_SETPOINT_SX(index) (RMU_WRITE_INDEX_SETPOINT_S1 + (index) * 2)
 
 static const int RMU_DEVICE_VERSION = 0x0103;
 
