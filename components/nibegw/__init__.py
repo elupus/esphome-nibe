@@ -71,7 +71,7 @@ CONSTANTS_SCHEMA = cv.Schema(
 
 TARGET_SCHEMA = cv.Schema(
     {
-        cv.Required(CONF_TARGET_IP): cv.ipv4,
+        cv.Required(CONF_TARGET_IP): cv.ipv4address,
         cv.Optional(CONF_TARGET_PORT, default=9999): cv.port,
     }
 )
@@ -81,7 +81,7 @@ UDP_SCHEMA = cv.Schema(
         cv.Required(CONF_TARGET, []): cv.ensure_list(TARGET_SCHEMA),
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
-        cv.Optional(CONF_SOURCE, []): cv.ensure_list(cv.ipv4)
+        cv.Optional(CONF_SOURCE, []): cv.ensure_list(cv.ipv4address)
     }
 )
 
@@ -119,11 +119,11 @@ async def to_code(config):
 
     if udp := config.get(CONF_UDP):
         for target in udp[CONF_TARGET]:
-            cg.add(var.add_target(IPAddress(*target[CONF_TARGET_IP].args), target[CONF_TARGET_PORT]))
+            cg.add(var.add_target(IPAddress(str(target[CONF_TARGET_IP])), target[CONF_TARGET_PORT]))
         cg.add(var.set_read_port(udp[CONF_READ_PORT]))
         cg.add(var.set_write_port(udp[CONF_WRITE_PORT]))
         for source in udp[CONF_SOURCE]:
-            cg.add(var.add_source_ip(IPAddress(*source.args)))
+            cg.add(var.add_source_ip(IPAddress(str(source))))
 
     if config[CONF_ACKNOWLEDGE]:
         cg.add(var.gw().setSendAcknowledge(1))
