@@ -1,7 +1,8 @@
 esphome:
   name: nibegw
   comment: Nibegw
-  platform: ESP32
+
+esp32:
   board: lolin_d32
 # Example is for a LolinD32 Board, use your own from here: https://esphome.io/components/esp32.html
 
