@@ -34,7 +34,7 @@ typedef std::function<void(const request_data_type &)> message_listener_type;
 
 class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDevice {
   float get_setup_priority() const override {
-    return setup_priority::BEFORE_CONNECTION;
+    return setup_priority::PROCESSOR;
   }
   const char *TAG = "nibegw";
   const int requests_queue_max = 3;
