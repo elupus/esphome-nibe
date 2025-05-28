@@ -52,8 +52,6 @@ enum eState {
   STATE_WAIT_START,
   STATE_WAIT_DATA,
   STATE_WAIT_ACK,
-  STATE_OK_MESSAGE_RECEIVED,
-  STATE_CRC_FAILURE,
 };
 
 enum eTokenType {
@@ -106,6 +104,10 @@ class NibeGw {
   void sendBegin();
   void sendEnd();
   boolean shouldAckNakSend(byte address);
+  void handleInvalidMessage();
+  void handleCrcFailure();
+  void handleMsgReceived();
+  void handleDataReceived(byte b);
 
   const char *TAG = "nibeGW";
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
