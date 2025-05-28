@@ -69,126 +69,128 @@ boolean NibeGw::messageStillOnProgress() {
   if (RS485->available() > 0)
     return true;
 
-  if (state == STATE_CRC_FAILURE || state == STATE_OK_MESSAGE_RECEIVED || state == STATE_WAIT_DATA)
+  if (state == STATE_WAIT_DATA)
     return true;
 
   return false;
+}
+
+void NibeGw::handleDataReceived(byte b) {
+  switch (state) {
+    case STATE_WAIT_START:
+
+      buffer[0] = buffer[1];
+      buffer[1] = b;
+
+      if (buffer[0] == STARTBYTE_MASTER) {
+        if (buffer[1] == STARTBYTE_MASTER) {
+          buffer[1] = 0x00;
+          state = STATE_WAIT_START;
+          ESP_LOGVV(TAG, "Ignore double start");
+        } else {
+          index = 2;
+          state = STATE_WAIT_DATA;
+          ESP_LOGVV(TAG, "Frame start found");
+        }
+      }
+      break;
+
+    case STATE_WAIT_ACK:
+
+      if (b == STARTBYTE_ACK) {
+        ESP_LOGV(TAG, "Ack seen");
+      } else if (b == STARTBYTE_NACK) {
+        ESP_LOGV(TAG, "Nack seen");
+      } else {
+        ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
+      }
+
+      state = STATE_WAIT_START;
+      buffer[1] = b;
+
+      break;
+
+    case STATE_WAIT_DATA:
+
+      if (index >= MAX_DATA_LEN) {
+        // too long message
+        state = STATE_WAIT_START;
+      } else {
+        buffer[index++] = b;
+        int msglen = checkNibeMessage(buffer, index);
+        ESP_LOGVV(TAG, "checkMsg=%d", msglen);
+
+        switch (msglen) {
+          case 0:
+            break;  // Ok, but not ready
+          case -1:
+            handleInvalidMessage();
+            state = STATE_WAIT_START;
+            break;  // Invalid message
+          case -2:
+            handleCrcFailure();
+            state = STATE_WAIT_START;
+            break;  // Checksum error
+          default:
+            handleMsgReceived();
+            state = STATE_WAIT_START;
+            break;
+        }
+
+        if (msglen) {
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERY_VERBOSE
+          for (byte i = 0; i < msglen && i < DEBUG_BUFFER_LEN / 3; i++) {
+            sprintf(debug_buf + i * 3, "%02X ", buffer[i]);
+          }
+          ESP_LOGVV(TAG, "Message of %d bytes received from heat pump: %s", msglen, debug_buf);
+#endif
+        }
+      }
+      break;
+  }
+}
+
+void NibeGw::handleMsgReceived() {
+  if (shouldAckNakSend(buffer[2])) {
+    if (buffer[4] == 0x00) {
+      int msglen = callback_msg_token_received((eTokenType) (buffer[3]), buffer);
+      if (msglen > 0) {
+        sendData(buffer, (byte) msglen);
+        state = STATE_WAIT_ACK;
+        ESP_LOGVV(TAG, "Responded to token %02X", buffer[3]);
+      } else {
+        sendAck();
+        ESP_LOGVV(TAG, "Had no response to token %02X ", buffer[3]);
+      }
+    } else {
+      sendAck();
+    }
+  }
+  callback_msg_received(buffer, index);
+}
+
+void NibeGw::handleCrcFailure() {
+  if (shouldAckNakSend(buffer[2])) {
+    sendNak();
+  }
+
+  callback_msg_received(buffer, index);
+  ESP_LOGW(TAG, "Had crc failure");
+}
+
+void NibeGw::handleInvalidMessage() {
+  callback_msg_received(buffer, index);
+  ESP_LOGW(TAG, "Had invalid message");
 }
 
 void NibeGw::loop() {
   if (!connectionState)
     return;
 
-  switch (state) {
-    case STATE_WAIT_START:
-      if (RS485->available() > 0) {
-        byte b = RS485->read();
-        ESP_LOGVV(TAG, "%02X", b);
-
-        buffer[0] = buffer[1];
-        buffer[1] = b;
-
-        if (buffer[0] == STARTBYTE_MASTER) {
-          if (buffer[1] == STARTBYTE_MASTER) {
-            buffer[1] = 0x00;
-            state = STATE_WAIT_START;
-            ESP_LOGVV(TAG, "Ignore double start");
-          } else {
-            index = 2;
-            state = STATE_WAIT_DATA;
-            ESP_LOGVV(TAG, "Frame start found");
-          }
-        }
-      }
-      break;
-
-    case STATE_WAIT_ACK:
-      if (RS485->available() > 0) {
-        byte b = RS485->read();
-        ESP_LOGVV(TAG, "%02X", b);
-
-        if (b == STARTBYTE_ACK) {
-          ESP_LOGV(TAG, "Ack seen");
-        } else if (b == STARTBYTE_NACK) {
-          ESP_LOGV(TAG, "Nack seen");
-        } else {
-          ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
-        }
-
-        state = STATE_WAIT_START;
-        buffer[1] = b;
-      }
-      break;
-
-    case STATE_WAIT_DATA:
-      if (RS485->available() > 0) {
-        byte b = RS485->read();
-        ESP_LOGVV(TAG, "%02X", b);
-
-        if (index >= MAX_DATA_LEN) {
-          // too long message
-          state = STATE_WAIT_START;
-        } else {
-          buffer[index++] = b;
-          int msglen = checkNibeMessage(buffer, index);
-          ESP_LOGVV(TAG, "checkMsg=%d", msglen);
-
-          switch (msglen) {
-            case 0:
-              break;  // Ok, but not ready
-            case -1:
-              state = STATE_WAIT_START;
-              break;  // Invalid message
-            case -2:
-              state = STATE_CRC_FAILURE;
-              break;  // Checksum error
-            default:
-              state = STATE_OK_MESSAGE_RECEIVED;
-              break;
-          }
-
-          if (msglen) {
-#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERY_VERBOSE
-            for (byte i = 0; i < msglen && i < DEBUG_BUFFER_LEN / 3; i++) {
-              sprintf(debug_buf + i * 3, "%02X ", buffer[i]);
-            }
-            ESP_LOGVV(TAG, "Message of %d bytes received from heat pump: %s", msglen, debug_buf);
-#endif
-
-            callback_msg_received(buffer, index);
-          }
-        }
-      }
-      break;
-
-    case STATE_CRC_FAILURE:
-      if (shouldAckNakSend(buffer[2]))
-        sendNak();
-      ESP_LOGW(TAG, "Had CRC failure");
-      state = STATE_WAIT_START;
-      break;
-
-    case STATE_OK_MESSAGE_RECEIVED:
-      if (!shouldAckNakSend(buffer[2])) {
-        state = STATE_WAIT_START;
-        break;
-      }
-
-      state = STATE_WAIT_START;
-      if (buffer[0] == STARTBYTE_MASTER && buffer[4] == 0x00) {
-        int msglen = callback_msg_token_received((eTokenType) (buffer[3]), buffer);
-        if (msglen > 0) {
-          sendData(buffer, (byte) msglen);
-          state = STATE_WAIT_ACK;
-          ESP_LOGVV(TAG, "Responded to token %02X", buffer[3]);
-        } else {
-          sendAck();
-          ESP_LOGVV(TAG, "Had no response to token %02X ", buffer[3]);
-        }
-      } else {
-        sendAck();
-      }
-      break;
+  if (RS485->available() > 0) {
+    byte b = RS485->read();
+    ESP_LOGVV(TAG, "%02X", b);
+    handleDataReceived(b);
   }
 }
 
