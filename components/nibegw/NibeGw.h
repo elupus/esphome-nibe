@@ -109,6 +109,7 @@ class NibeGw {
   void handleCrcFailure();
   void handleMsgReceived();
   void handleDataReceived(byte b);
+  void handleExpectedAck(byte b);
   void stateCompleteNak();
   void stateCompleteAck();
   void stateComplete(byte data);
