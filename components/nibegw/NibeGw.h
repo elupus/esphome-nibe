@@ -50,7 +50,9 @@ using namespace esphome;
 // state machine states
 enum eState {
   STATE_WAIT_START,
+  STATE_WAIT_START_SLAVE,
   STATE_WAIT_DATA,
+  STATE_WAIT_DATA_SLAVE,
   STATE_WAIT_ACK,
 };
 
@@ -74,7 +76,7 @@ enum eStartByte {
 #define MAX_DATA_LEN 128
 
 typedef std::function<void(const byte *const data, int len)> callback_msg_received_type;
-typedef std::function<int(eTokenType token, byte *data)> callback_msg_token_received_type;
+typedef std::function<int(const byte token[4], byte *data)> callback_msg_token_received_type;
 
 #define SMS40 0x16
 #define RMU40 0x19
@@ -89,8 +91,9 @@ class NibeGw {
   eState state;
   boolean connectionState;
   esphome::GPIOPin *directionPin;
-  byte buffer[MAX_DATA_LEN];
-  byte index;
+  byte buffer[MAX_DATA_LEN * 2];
+  size_t index;
+  size_t indexSlave;
   esphome::uart::UARTDevice *RS485;
   callback_msg_received_type callback_msg_received;
   callback_msg_token_received_type callback_msg_token_received;
@@ -99,15 +102,16 @@ class NibeGw {
 
   int checkNibeMessage(const byte *const data, byte len);
   void sendData(const byte *const data, byte len);
-  void sendAck();
-  void sendNak();
   void sendBegin();
   void sendEnd();
   boolean shouldAckNakSend(byte address);
-  void handleInvalidMessage();
+  void handleInvalidData(byte data);
   void handleCrcFailure();
   void handleMsgReceived();
   void handleDataReceived(byte b);
+  void stateCompleteNak();
+  void stateCompleteAck();
+  void stateComplete(byte data);
 
   const char *TAG = "nibeGW";
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
