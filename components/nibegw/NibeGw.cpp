@@ -102,34 +102,17 @@ void NibeGw::handleDataReceived(byte b) {
       break;
 
     case STATE_WAIT_START_SLAVE:
-      buffer[index++] = b;
       if (b == STARTBYTE_SLAVE) {
-        indexSlave = index - 1;
+        indexSlave = index;
+        buffer[index++] = b;
         state = STATE_WAIT_DATA_SLAVE;
-      } else if (b == STARTBYTE_ACK || b == STARTBYTE_NACK) {
-        stateComplete(b);
       } else {
-        ESP_LOGW(TAG, "Unexpected slave start code: %02X", b);
-        stateComplete(b);
+        handleExpectedAck(b);
       }
       break;
 
     case STATE_WAIT_ACK:
-
-      if (b == STARTBYTE_ACK) {
-        ESP_LOGV(TAG, "Ack seen");
-        buffer[index++] = b;
-      } else if (b == STARTBYTE_NACK) {
-        ESP_LOGV(TAG, "Nack seen");
-        buffer[index++] = b;
-      } else if (b == STARTBYTE_MASTER) {
-        ESP_LOGV(TAG, "Not acked");
-      } else {
-        ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
-        buffer[index++] = b;
-      }
-
-      stateComplete(b);
+      handleExpectedAck(b);
       break;
 
     case STATE_WAIT_DATA_SLAVE: {
@@ -179,6 +162,21 @@ void NibeGw::handleDataReceived(byte b) {
       }
       break;
   }
+}
+
+void NibeGw::handleExpectedAck(byte b) {
+  buffer[index++] = b;
+  if (b == STARTBYTE_ACK) {
+    ESP_LOGV(TAG, "Ack");
+  } else if (b == STARTBYTE_NACK) {
+    ESP_LOGV(TAG, "Nack");
+  } else if (b == STARTBYTE_MASTER) {
+    ESP_LOGV(TAG, "Master");
+    index--;
+  } else {
+    ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
+  }
+  stateComplete(b);
 }
 
 void NibeGw::stateComplete(byte data) {
