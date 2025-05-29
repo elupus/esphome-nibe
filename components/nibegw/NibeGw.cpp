@@ -76,6 +76,12 @@ boolean NibeGw::messageStillOnProgress() {
 }
 
 void NibeGw::handleDataReceived(byte b) {
+  if (index >= MAX_DATA_LEN) {
+    // too long message
+    handleInvalidData(b);
+    return;
+  }
+
   switch (state) {
     case STATE_WAIT_START:
 
@@ -95,92 +101,130 @@ void NibeGw::handleDataReceived(byte b) {
       }
       break;
 
+    case STATE_WAIT_START_SLAVE:
+      buffer[index++] = b;
+      if (b == STARTBYTE_SLAVE) {
+        indexSlave = index - 1;
+        state = STATE_WAIT_DATA_SLAVE;
+      } else if (b == STARTBYTE_ACK || b == STARTBYTE_NACK) {
+        stateComplete(b);
+      } else {
+        ESP_LOGW(TAG, "Unexpected slave start code: %02X", b);
+        stateComplete(b);
+      }
+      break;
+
     case STATE_WAIT_ACK:
 
       if (b == STARTBYTE_ACK) {
         ESP_LOGV(TAG, "Ack seen");
+        buffer[index++] = b;
       } else if (b == STARTBYTE_NACK) {
         ESP_LOGV(TAG, "Nack seen");
+        buffer[index++] = b;
+      } else if (b == STARTBYTE_MASTER) {
+        ESP_LOGV(TAG, "Not acked");
       } else {
         ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
+        buffer[index++] = b;
       }
 
-      state = STATE_WAIT_START;
-      buffer[1] = b;
-
+      stateComplete(b);
       break;
+
+    case STATE_WAIT_DATA_SLAVE: {
+      buffer[index++] = b;
+
+      // make sure we have start, cmd, len
+      if (index < indexSlave + 3) {
+        break;
+      }
+
+      // make sure we have start, cmd, len, data[len], checksum
+      if (index < indexSlave + buffer[2] + 4) {
+        break;
+      }
+
+      ESP_LOGV(TAG, "Received token %02X and response", buffer[3]);
+      state = STATE_WAIT_ACK;
+    } break;
 
     case STATE_WAIT_DATA:
 
-      if (index >= MAX_DATA_LEN) {
-        // too long message
-        state = STATE_WAIT_START;
-      } else {
-        buffer[index++] = b;
-        int msglen = checkNibeMessage(buffer, index);
-        ESP_LOGVV(TAG, "checkMsg=%d", msglen);
+      buffer[index++] = b;
+      int msglen = checkNibeMessage(buffer, index);
+      ESP_LOGVV(TAG, "checkMsg=%d", msglen);
 
-        switch (msglen) {
-          case 0:
-            break;  // Ok, but not ready
-          case -1:
-            handleInvalidMessage();
-            state = STATE_WAIT_START;
-            break;  // Invalid message
-          case -2:
-            handleCrcFailure();
-            state = STATE_WAIT_START;
-            break;  // Checksum error
-          default:
-            handleMsgReceived();
-            state = STATE_WAIT_START;
-            break;
-        }
+      switch (msglen) {
+        case 0:
+          break;  // Ok, but not ready
+        case -1:
+          handleInvalidData(b);
+          break;  // Invalid message
+        case -2:
+          handleCrcFailure();
+          break;  // Checksum error
+        default:
+          handleMsgReceived();
+          break;
+      }
 
-        if (msglen) {
+      if (msglen) {
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERY_VERBOSE
-          for (byte i = 0; i < msglen && i < DEBUG_BUFFER_LEN / 3; i++) {
-            sprintf(debug_buf + i * 3, "%02X ", buffer[i]);
-          }
-          ESP_LOGVV(TAG, "Message of %d bytes received from heat pump: %s", msglen, debug_buf);
-#endif
+        for (byte i = 0; i < msglen && i < DEBUG_BUFFER_LEN / 3; i++) {
+          sprintf(debug_buf + i * 3, "%02X ", buffer[i]);
         }
+        ESP_LOGVV(TAG, "Message of %d bytes received from heat pump: %s", msglen, debug_buf);
+#endif
       }
       break;
   }
+}
+
+void NibeGw::stateComplete(byte data) {
+  callback_msg_received(buffer, index);
+  state = STATE_WAIT_START;
+  index = 0;
+  buffer[1] = data;  // reset second byte
 }
 
 void NibeGw::handleMsgReceived() {
   if (shouldAckNakSend(buffer[2])) {
     if (buffer[4] == 0x00) {
-      int msglen = callback_msg_token_received((eTokenType) (buffer[3]), buffer);
+      int msglen = callback_msg_token_received(buffer, &buffer[index]);
       if (msglen > 0) {
-        sendData(buffer, (byte) msglen);
+        ESP_LOGD(TAG, "Has response to token %02X", buffer[3]);
+        sendData(&buffer[index], msglen);
+        index += msglen;
         state = STATE_WAIT_ACK;
-        ESP_LOGVV(TAG, "Responded to token %02X", buffer[3]);
       } else {
-        sendAck();
-        ESP_LOGVV(TAG, "Had no response to token %02X ", buffer[3]);
+        ESP_LOGV(TAG, "Had no response to token %02X ", buffer[3]);
+        stateCompleteAck();
       }
     } else {
-      sendAck();
+      stateCompleteAck();
+    }
+  } else {
+    if (buffer[4] == 0x00) {
+      state = STATE_WAIT_START_SLAVE;
+    } else {
+      state = STATE_WAIT_ACK;
     }
   }
-  callback_msg_received(buffer, index);
 }
 
 void NibeGw::handleCrcFailure() {
-  if (shouldAckNakSend(buffer[2])) {
-    sendNak();
-  }
-
-  callback_msg_received(buffer, index);
   ESP_LOGW(TAG, "Had crc failure");
+  if (shouldAckNakSend(buffer[2])) {
+    stateCompleteNak();
+  } else {
+    stateComplete(0);
+  }
 }
 
-void NibeGw::handleInvalidMessage() {
-  callback_msg_received(buffer, index);
+void NibeGw::handleInvalidData(byte data) {
   ESP_LOGW(TAG, "Had invalid message");
+  stateComplete(data);
 }
 
 void NibeGw::loop() {
@@ -267,18 +311,24 @@ void NibeGw::sendData(const byte *const data, byte len) {
 #endif
 }
 
-void NibeGw::sendAck() {
+void NibeGw::stateCompleteAck() {
   sendBegin();
   RS485->write_byte(STARTBYTE_ACK);
   sendEnd();
   ESP_LOGVV(TAG, "Sent ACK");
+
+  buffer[index++] = STARTBYTE_ACK;
+  stateComplete(0);
 }
 
-void NibeGw::sendNak() {
+void NibeGw::stateCompleteNak() {
   sendBegin();
   RS485->write_byte(STARTBYTE_NACK);
   sendEnd();
   ESP_LOGVV(TAG, "Sent NACK");
+
+  buffer[index++] = STARTBYTE_NACK;
+  stateComplete(0);
 }
 
 boolean NibeGw::shouldAckNakSend(byte address) {

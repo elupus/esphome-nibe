@@ -55,7 +55,7 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   AsyncUDP udp_write_;
 
   void callback_msg_received(const byte *const data, int len);
-  int callback_msg_token_received(eTokenType token, byte *data);
+  int callback_msg_token_received(const byte token[4], byte *data);
   void callback_debug(byte verbose, char *data);
 
   void token_request_cache(AsyncUDPPacket &udp, byte address, byte token);
