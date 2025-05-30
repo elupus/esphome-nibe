@@ -159,12 +159,11 @@ void NibeGw::handleDataReceived(byte b) {
 
 void NibeGw::handleExpectedAck(byte b) {
   buffer[index++] = b;
-  if (b == STARTBYTE_ACK) {
-    ESP_LOGVV(TAG, "Ack");
-  } else if (b == STARTBYTE_NACK) {
-    ESP_LOGVV(TAG, "Nack");
+  ESP_LOGV(TAG, "Recv: %02X", STARTBYTE_ACK);
+  if (b == STARTBYTE_ACK || b == STARTBYTE_NACK) {
+    /* Complete */
   } else if (b == STARTBYTE_MASTER) {
-    ESP_LOGVV(TAG, "Skip");
+    /* Next message */
     index--;
   } else {
     ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
