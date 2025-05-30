@@ -99,7 +99,7 @@ class NibeGw {
   callback_msg_token_received_type callback_msg_token_received;
   std::set<uint16_t> addressAcknowledge;
 
-  int checkNibeMessage(const byte *const data, byte len);
+  byte calculateChecksum(const byte *const data, byte len);
   void sendData(const byte *const data, byte len);
   void sendBegin();
   void sendEnd();

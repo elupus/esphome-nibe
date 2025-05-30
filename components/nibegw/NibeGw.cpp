@@ -87,11 +87,15 @@ void NibeGw::handleDataReceived(byte b) {
         if (buffer[1] == STARTBYTE_MASTER) {
           buffer[1] = 0x00;
           state = STATE_WAIT_START;
-          ESP_LOGVV(TAG, "Ignore double start");
+          ESP_LOGD(TAG, "Ignore double start");
         } else {
           index = 2;
           state = STATE_WAIT_DATA;
           ESP_LOGVV(TAG, "Frame start found");
+        }
+      } else {
+        if (buffer[1] != STARTBYTE_MASTER) {
+          ESP_LOGD(TAG, "Ignoring byte %02X", b);
         }
       }
       break;
@@ -130,30 +134,24 @@ void NibeGw::handleDataReceived(byte b) {
     case STATE_WAIT_DATA:
 
       buffer[index++] = b;
-      int msglen = checkNibeMessage(buffer, index);
-      ESP_LOGVV(TAG, "checkMsg=%d", msglen);
 
-      switch (msglen) {
-        case 0:
-          break;  // Ok, but not ready
-        case -1:
-          handleInvalidData(b);
-          break;  // Invalid message
-        case -2:
-          handleCrcFailure();
-          break;  // Checksum error
-        default:
-          handleMsgReceived();
-          break;
+      if (index < 5) {
+        // wait for start, address, cmd, len
+        break;
       }
 
-      if (msglen) {
-#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERY_VERBOSE
-        for (byte i = 0; i < msglen && i < DEBUG_BUFFER_LEN / 3; i++) {
-          sprintf(debug_buf + i * 3, "%02X ", buffer[i]);
-        }
-        ESP_LOGVV(TAG, "Message of %d bytes received from heat pump: %s", msglen, debug_buf);
-#endif
+      const byte len = buffer[4];
+      if (index < len + 6) {
+        // wait for start, address, cmd, len, data[len], checksum
+        break;
+      }
+
+      const byte checksum = buffer[len + 5];
+      const byte expected = calculateChecksum(&buffer[1], len + 4);
+      if (checksum == expected) {
+        handleMsgReceived();
+      } else {
+        handleCrcFailure();
       }
       break;
   }
@@ -162,11 +160,11 @@ void NibeGw::handleDataReceived(byte b) {
 void NibeGw::handleExpectedAck(byte b) {
   buffer[index++] = b;
   if (b == STARTBYTE_ACK) {
-    ESP_LOGV(TAG, "Ack");
+    ESP_LOGVV(TAG, "Ack");
   } else if (b == STARTBYTE_NACK) {
-    ESP_LOGV(TAG, "Nack");
+    ESP_LOGVV(TAG, "Nack");
   } else if (b == STARTBYTE_MASTER) {
-    ESP_LOGV(TAG, "Master");
+    ESP_LOGVV(TAG, "Skip");
     index--;
   } else {
     ESP_LOGW(TAG, "Unexpected Ack/Nack: %02X", b);
@@ -175,6 +173,15 @@ void NibeGw::handleExpectedAck(byte b) {
 }
 
 void NibeGw::stateComplete(byte data) {
+  if (index) {
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
+    for (byte i = 0; i < index && i < DEBUG_BUFFER_LEN / 3; i++) {
+      sprintf(debug_buf + i * 3, "%02X ", buffer[i]);
+    }
+    ESP_LOGV(TAG, "Recv: %s", debug_buf);
+#endif
+  }
+
   callback_msg_received(buffer, index);
   state = STATE_WAIT_START;
   index = 0;
@@ -189,12 +196,10 @@ void NibeGw::handleMsgReceived() {
     if (len == 0) {
       int msglen = callback_msg_token_received(address, command, &buffer[index]);
       if (msglen > 0) {
-        ESP_LOGD(TAG, "Has response to token %02X", command);
         sendData(&buffer[index], msglen);
         index += msglen;
         state = STATE_WAIT_ACK;
       } else {
-        ESP_LOGV(TAG, "Had no response to token %02X ", command);
         stateCompleteAck();
       }
     } else {
@@ -234,49 +239,18 @@ void NibeGw::loop() {
   }
 }
 
-/*
-   Return:
-    >0 if valid message received (return message len)
-     0 if ok, but message not ready
-    -1 if invalid message
-    -2 if checksum fails
-*/
-int NibeGw::checkNibeMessage(const byte *const data, byte len) {
-  if (len <= 0)
-    return 0;
-
-  if (len >= 1) {
-    if (data[0] != STARTBYTE_MASTER)
-      return -1;
-
-    if (len >= 6) {
-      int datalen = data[4];
-
-      if (len < datalen + 6)
-        return 0;
-
-      byte checksum = 0;
-
-      // calculate XOR checksum
-      for (int i = 1; i < (datalen + 5); i++)
-        checksum ^= data[i];
-
-      byte msg_checksum = data[datalen + 5];
-
-      ESP_LOGVV(TAG, "checksum=%02X, msg_checksum=%02X", checksum, msg_checksum);
-
-      if (checksum != msg_checksum) {
-        // if checksum is 0x5C (start character),
-        // heat pump seems to send 0xC5 checksum
-        if (checksum != 0x5C && msg_checksum != 0xC5)
-          return -2;
-      }
-
-      return datalen + 6;
-    }
+byte NibeGw::calculateChecksum(const byte *const data, byte len) {
+  byte checksum = 0;
+  for (byte i = 0; i < len; i++) {
+    checksum ^= data[i];
   }
 
-  return 0;
+  if (checksum == STARTBYTE_MASTER) {
+    // if checksum is 0x5C (start character),
+    // heat pump seems to send 0xC5 checksum
+    checksum = 0xC5;
+  }
+  return checksum;
 }
 
 void NibeGw::sendBegin() {
@@ -299,11 +273,11 @@ void NibeGw::sendData(const byte *const data, byte len) {
   RS485->write_array(data, len);
   sendEnd();
 
-#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERY_VERBOSE
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
   for (byte i = 0; i < len && i < DEBUG_BUFFER_LEN / 3; i++) {
     sprintf(debug_buf + i * 3, "%02X ", data[i]);
   }
-  ESP_LOGVV(TAG, "Sent message of %d bytes to heat pump: %s", len, debug_buf);
+  ESP_LOGV(TAG, "Sent: %s", debug_buf);
 #endif
 }
 
@@ -311,7 +285,7 @@ void NibeGw::stateCompleteAck() {
   sendBegin();
   RS485->write_byte(STARTBYTE_ACK);
   sendEnd();
-  ESP_LOGVV(TAG, "Sent ACK");
+  ESP_LOGV(TAG, "Sent: %02X", STARTBYTE_ACK);
 
   buffer[index++] = STARTBYTE_ACK;
   stateComplete(0);
@@ -321,7 +295,7 @@ void NibeGw::stateCompleteNak() {
   sendBegin();
   RS485->write_byte(STARTBYTE_NACK);
   sendEnd();
-  ESP_LOGVV(TAG, "Sent NACK");
+  ESP_LOGV(TAG, "Sent: %02X", STARTBYTE_NACK);
 
   buffer[index++] = STARTBYTE_NACK;
   stateComplete(0);
