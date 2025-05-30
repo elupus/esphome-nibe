@@ -126,14 +126,10 @@ async def to_code(config):
             cg.add(var.add_source_ip(IPAddress(str(source))))
 
     if config[CONF_ACKNOWLEDGE]:
-        cg.add(var.gw().setSendAcknowledge(1))
         for address in config[CONF_ACKNOWLEDGE]:
             cg.add(
                 var.gw().setAcknowledge(address, True)
             )
-    else:
-        cg.add(var.gw().setSendAcknowledge(0))
-
 
     def xor8(data: bytes) -> int:
         chksum = reduce(xor, data)

@@ -7,7 +7,8 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin *dir_pin) {
   gw_ = new NibeGw(this, dir_pin);
   gw_->setCallback(
       std::bind(&NibeGwComponent::callback_msg_received, this, std::placeholders::_1, std::placeholders::_2),
-      std::bind(&NibeGwComponent::callback_msg_token_received, this, std::placeholders::_1, std::placeholders::_2));
+      std::bind(&NibeGwComponent::callback_msg_token_received, this, std::placeholders::_1, std::placeholders::_2,
+                std::placeholders::_3));
 
   udp_read_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, READ_TOKEN); });
   udp_write_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, WRITE_TOKEN); });
@@ -83,8 +84,8 @@ static int copy_request(const request_data_type &request, byte *data) {
   return len;
 }
 
-int NibeGwComponent::callback_msg_token_received(const byte token[4], byte *data) {
-  request_key_type key{token[2] | (token[1] << 8), token[3]};
+int NibeGwComponent::callback_msg_token_received(uint16_t address, byte command, byte *data) {
+  request_key_type key{address, command};
 
   {
     const auto &it = requests_.find(key);

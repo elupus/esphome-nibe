@@ -76,7 +76,7 @@ enum eStartByte {
 #define MAX_DATA_LEN 128
 
 typedef std::function<void(const byte *const data, int len)> callback_msg_received_type;
-typedef std::function<int(const byte token[4], byte *data)> callback_msg_token_received_type;
+typedef std::function<int(uint16_t address, byte command, byte *data)> callback_msg_token_received_type;
 
 #define SMS40 0x16
 #define RMU40 0x19
@@ -97,14 +97,13 @@ class NibeGw {
   esphome::uart::UARTDevice *RS485;
   callback_msg_received_type callback_msg_received;
   callback_msg_token_received_type callback_msg_token_received;
-  std::set<byte> addressAcknowledge;
-  boolean sendAcknowledge;
+  std::set<uint16_t> addressAcknowledge;
 
   int checkNibeMessage(const byte *const data, byte len);
   void sendData(const byte *const data, byte len);
   void sendBegin();
   void sendEnd();
-  boolean shouldAckNakSend(byte address);
+  boolean shouldAckNakSend(uint16_t address);
   void handleInvalidData(byte data);
   void handleCrcFailure();
   void handleMsgReceived();
@@ -147,7 +146,6 @@ class NibeGw {
   void setAckRmu40Address(boolean val) {
     setAcknowledge(RMU40, val);
   }
-  void setSendAcknowledge(boolean val);
 };
 
 #endif
