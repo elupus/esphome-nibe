@@ -70,6 +70,9 @@ external_components:
       url: https://github.com/elupus/esphome-nibe.git
     components: [ nibegw ]
 
+logger:
+  level: WARNING
+
 uart:
   id: my_uart
   rx_pin: GPIO16
