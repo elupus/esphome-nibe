@@ -26,7 +26,7 @@
 namespace esphome {
 namespace nibegw {
 
-typedef std::tuple<byte, byte> request_key_type;
+typedef std::tuple<uint16_t, byte> request_key_type;
 typedef std::vector<byte> request_data_type;
 typedef std::function<request_data_type(void)> request_provider_type;
 typedef std::tuple<network::IPAddress, int> target_type;
@@ -55,7 +55,7 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   AsyncUDP udp_write_;
 
   void callback_msg_received(const byte *const data, int len);
-  int callback_msg_token_received(const byte token[4], byte *data);
+  int callback_msg_token_received(uint16_t address, byte command, byte *data);
   void callback_debug(byte verbose, char *data);
 
   void token_request_cache(AsyncUDPPacket &udp, byte address, byte token);

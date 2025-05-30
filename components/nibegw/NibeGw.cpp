@@ -23,7 +23,6 @@
 using namespace esphome;
 
 NibeGw::NibeGw(esphome::uart::UARTDevice *serial, esphome::GPIOPin *RS485DirectionPin) {
-  sendAcknowledge = true;
   state = STATE_WAIT_START;
   connectionState = false;
   RS485 = serial;
@@ -56,10 +55,6 @@ NibeGw &NibeGw::setCallback(callback_msg_received_type callback_msg_received,
   this->callback_msg_token_received = callback_msg_token_received;
 
   return *this;
-}
-
-void NibeGw::setSendAcknowledge(boolean val) {
-  sendAcknowledge = val;
 }
 
 boolean NibeGw::messageStillOnProgress() {
@@ -124,7 +119,7 @@ void NibeGw::handleDataReceived(byte b) {
       }
 
       // make sure we have start, cmd, len, data[len], checksum
-      if (index < indexSlave + buffer[indexSlave+2] + 4) {
+      if (index < indexSlave + buffer[indexSlave + 2] + 4) {
         break;
       }
 
@@ -187,23 +182,26 @@ void NibeGw::stateComplete(byte data) {
 }
 
 void NibeGw::handleMsgReceived() {
-  if (shouldAckNakSend(buffer[2])) {
-    if (buffer[4] == 0x00) {
-      int msglen = callback_msg_token_received(buffer, &buffer[index]);
+  const uint16_t address = buffer[2] | (buffer[1] << 8);
+  const uint8_t command = buffer[3];
+  const uint8_t len = buffer[4];
+  if (shouldAckNakSend(address)) {
+    if (len == 0) {
+      int msglen = callback_msg_token_received(address, command, &buffer[index]);
       if (msglen > 0) {
-        ESP_LOGD(TAG, "Has response to token %02X", buffer[3]);
+        ESP_LOGD(TAG, "Has response to token %02X", command);
         sendData(&buffer[index], msglen);
         index += msglen;
         state = STATE_WAIT_ACK;
       } else {
-        ESP_LOGV(TAG, "Had no response to token %02X ", buffer[3]);
+        ESP_LOGV(TAG, "Had no response to token %02X ", command);
         stateCompleteAck();
       }
     } else {
       stateCompleteAck();
     }
   } else {
-    if (buffer[4] == 0x00) {
+    if (len == 0) {
       state = STATE_WAIT_START_SLAVE;
     } else {
       state = STATE_WAIT_ACK;
@@ -329,6 +327,6 @@ void NibeGw::stateCompleteNak() {
   stateComplete(0);
 }
 
-boolean NibeGw::shouldAckNakSend(byte address) {
+boolean NibeGw::shouldAckNakSend(uint16_t address) {
   return addressAcknowledge.count(address) != 0;
 }
