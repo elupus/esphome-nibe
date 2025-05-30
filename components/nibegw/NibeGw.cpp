@@ -124,7 +124,7 @@ void NibeGw::handleDataReceived(byte b) {
       }
 
       // make sure we have start, cmd, len, data[len], checksum
-      if (index < indexSlave + buffer[2] + 4) {
+      if (index < indexSlave + buffer[indexSlave+2] + 4) {
         break;
       }
 
