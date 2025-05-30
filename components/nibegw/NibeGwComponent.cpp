@@ -41,7 +41,6 @@ void NibeGwComponent::callback_msg_received(const byte *const data, int len) {
     return;
   }
 
-  ESP_LOGV(TAG, "UDP Packet with %d bytes to send", len);
   for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++) {
     ip_addr_t address = (ip_addr_t) std::get<0>(*target);
     if (!udp_read_.writeTo(data, len, &address, std::get<1>(*target))) {
