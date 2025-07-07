@@ -65,6 +65,8 @@ request_data_type build_request_data(byte token, request_data_type payload) {
   byte checksum = 0;
   for (auto &val : data)
     checksum ^= val;
+  if (checksum == 0x5c)
+    checksum = 0xc5;
   data.push_back(checksum);
   return data;
 }
