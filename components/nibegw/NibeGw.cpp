@@ -214,7 +214,7 @@ void NibeGw::handleMsgReceived() {
 
 void NibeGw::handleCrcFailure() {
   ESP_LOGW(TAG, "Had crc failure");
-  if (shouldAckNakSend(buffer[2])) {
+  if (shouldAckNakSend(buffer[2] | (buffer[1] << 8)) {
     stateCompleteNak();
   } else {
     stateComplete(0);
