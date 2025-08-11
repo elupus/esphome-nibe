@@ -158,7 +158,7 @@ void NibeGw::handleDataReceived(byte b) {
 
 void NibeGw::handleExpectedAck(byte b) {
   buffer[index++] = b;
-  ESP_LOGV(TAG, "Recv: %02X", STARTBYTE_ACK);
+  ESP_LOGV(TAG, "Recv: %02X", b);
   if (b == STARTBYTE_ACK || b == STARTBYTE_NACK) {
     /* Complete */
   } else if (b == STARTBYTE_MASTER) {
