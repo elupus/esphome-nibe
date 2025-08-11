@@ -86,7 +86,6 @@ void NibeGw::handleDataReceived(byte b) {
       if (buffer[0] == STARTBYTE_MASTER) {
         if (buffer[1] == STARTBYTE_MASTER) {
           buffer[1] = 0x00;
-          state = STATE_WAIT_START;
           ESP_LOGD(TAG, "Ignore double start");
         } else {
           index = 2;
