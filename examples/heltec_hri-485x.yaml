@@ -1,6 +1,6 @@
 # Adapted from esphome example https://devices.esphome.io/devices/Heltec-HRI-485X
 # To install over stock firmware you must ground the internal USER pin to ground while powering up the device. 3.3v power must be applied to internal headers in order for it to be successful, it will not work with external power provided through the phoenix connectors
-# Tested initial install with Waveshare CH343G USB to TTL adapter
+# Tested initial install with Waveshare CH343G USB to TTL adapter on a Nibe F730
 
 esphome:
   name: "nibe-gw"
