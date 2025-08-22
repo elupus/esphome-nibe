@@ -1,0 +1,97 @@
+# Adapted from esphome example https://devices.esphome.io/devices/Heltec-HRI-485X
+# To install over stock firmware you must ground the internal USER pin to ground while powering up the device. 3.3v power must be applied to internal headers in order for it to be successful, it will not work with external power provided through the phoenix connectors
+# Tested initial install with Waveshare CH343G USB to TTL adapter
+
+esphome:
+  name: "nibe-gw"
+  friendly_name: Nibe GW
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  baud_rate: 0
+
+# Enable Home Assistant API
+api:  
+  on_client_connected:
+    switch.turn_on: HAOnlineLed
+  on_client_disconnected:
+    switch.turn_off: HAOnlineLed
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+status_led:
+  pin: GPIO3
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true # Fast connect to connect to my hidden network
+  # It is recommended to disable powersave mode on wifi, to make sure the device does not miss UDP requests sent.
+  power_save_mode: none
+  # The device needs a static IP. Either do that here with the manual_ip node, or do it via another way (router)
+
+# Load nibe component
+external_components:
+  - source: github://elupus/esphome-nibe
+
+# Configure UART
+uart:
+  tx_pin: GPIO33
+  rx_pin: GPIO37
+  baud_rate: 9600
+
+# Set pins required for Heltec HRI-485X
+switch:
+  - platform: gpio
+    pin: GPIO16
+    id: ModbusOnOff # Enable MAX3485 chip
+
+  - platform: gpio
+    pin: GPIO2
+    id: HAOnlineLed # Show connection status to Home Assistant
+    inverted: true
+
+# Configure NibeGW
+nibegw:
+  udp:
+    # The target address(s) to send data to. May be a multicast address.
+    # When using Home Assistant: this is your Home Assistant IP.
+    target:
+      - ip: 192.168.255.2
+        port: 9999 #The Nibe Home Assistant integration listens to 9999 by default 
+
+    # List of source address to accept data from, may be empty for no filter
+    source:
+    #  - 192.168.255.254
+
+    # Optional port this device will listen to to receive read requests. Defaults to 9999
+    # read_port: 9999
+
+    # Optional port this device will listen to to receive write request. Defaults to 10000
+    # write_port: 10000
+
+  acknowledge:
+    - MODBUS40
+
+  # Constant replies to certain requests cabe made
+  constants:
+    - address: MODBUS40
+      token: ACCESSORY
+      data: [
+            0x0A, # MODBUS version low
+            0x00, # MODBUS version high
+            0x01, # MODBUS address?
+      ]
+
+# Some helper functions to restart ESPHome from HA
+button:
+- platform: restart
+  name: Nibegw Restart
+- platform: safe_mode
+  name: Nibegw Safe Mode Boot
