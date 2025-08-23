@@ -11,9 +11,6 @@ esp32:
   framework:
     type: arduino
 
-logger:
-  baud_rate: 0
-
 # Enable Home Assistant API
 api:  
   on_client_connected:
@@ -25,8 +22,8 @@ ota:
   - platform: esphome
     password: !secret ota_password
 
-status_led:
-  pin: GPIO3
+logger:
+  baud_rate: 0
 
 wifi:
   ssid: !secret wifi_ssid
@@ -57,18 +54,21 @@ switch:
     id: HAOnlineLed # Show connection status to Home Assistant
     inverted: true
 
+status_led:
+  pin: GPIO3
+
 # Configure NibeGW
 nibegw:
   udp:
     # The target address(s) to send data to. May be a multicast address.
     # When using Home Assistant: this is your Home Assistant IP.
     target:
-      - ip: 192.168.255.2
+      - ip: 192.168.255.254
         port: 9999 #The Nibe Home Assistant integration listens to 9999 by default 
 
     # List of source address to accept data from, may be empty for no filter
     source:
-    #  - 192.168.255.254
+      - 192.168.255.254
 
     # Optional port this device will listen to to receive read requests. Defaults to 9999
     # read_port: 9999
