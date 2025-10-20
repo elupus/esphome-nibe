@@ -2,6 +2,8 @@
 
 An ESPHome component that wraps the Arduino based udp gateway `NibeGW` up, for use with ESPHome configuration.
 
+NibeGW is known to work also on Nibe clone pumps. For example, Jämä STAR RST 6 corresponds to Nibe F1245 and works without modifications.
+
 ## Background
 
 When Modbus adapter support is enabled from the heat pump UI, the heat pump will start to send telegrams every now and then. A telegram contains a maximum of 20 registers. Those 20 registers can be configured via the Nibe ModbusManager application.
@@ -15,6 +17,8 @@ You will need an esp32 with some type of RS485 converter hooked up to a UART. It
 An example of such a board is the [LilyGo T-CAN485](https://github.com/Xinyuan-LilyGO/T-CAN485), this board has an integrated RS485 connection that is verified to work with this setup. An example setup can be found in the [examples](./examples) folder.
 
 Another board that should work but isn't tested is the [LILYGO® T-RSC3 ESP32-C3](https://github.com/Xinyuan-LilyGO/T-RSC3)
+
+If your heat pump has very old software, consider updating it first: [myUplink Firmware Downloads](https://myuplink.com/update-firmware)
 
 ### Wifi power save mode
 It is recommended to disable powersave mode on wifi, to make sure the device does not miss UDP requests sent.
