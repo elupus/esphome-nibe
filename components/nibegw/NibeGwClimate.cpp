@@ -7,7 +7,7 @@
 namespace esphome {
 namespace nibegw {
 
-static const char *const TAG = "nibegw";
+static const char *TAG = "nibegw";
 
 const int int16_invalid = -0x8000;
 const int int8_invalid = -0x80;
