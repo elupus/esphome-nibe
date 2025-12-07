@@ -1,6 +1,7 @@
 #include "NibeGwComponent.h"
 
 namespace esphome {
+
 namespace nibegw {
 
 NibeGwComponent::NibeGwComponent(esphome::GPIOPin *dir_pin) {
@@ -9,9 +10,6 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin *dir_pin) {
       std::bind(&NibeGwComponent::callback_msg_received, this, std::placeholders::_1, std::placeholders::_2),
       std::bind(&NibeGwComponent::callback_msg_token_received, this, std::placeholders::_1, std::placeholders::_2,
                 std::placeholders::_3));
-
-  udp_read_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, READ_TOKEN); });
-  udp_write_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, WRITE_TOKEN); });
 }
 
 static request_data_type dedup(const uint8_t *data, int len, uint8_t val) {
@@ -41,40 +39,43 @@ void NibeGwComponent::callback_msg_received(const uint8_t *data, int len) {
     return;
   }
 
-  for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++) {
-    ip_addr_t address = (ip_addr_t) std::get<0>(*target);
-    if (!udp_read_.writeTo(data, len, &address, std::get<1>(*target))) {
-      ESP_LOGW(TAG, "UDP Packet send failed to %s:%d", std::get<0>(*target).str().c_str(), std::get<1>(*target));
+  if (!udp_read_) {
+    ESP_LOGW(TAG, "UDP read socket not available");
+    return;
+  }
+
+  // Send to all UDP targets
+  for (auto &&target : udp_targets_) {
+    int result = udp_read_->sendto(data, len, 0, (sockaddr *) &target.storage, target.len);
+    if (result < 0) {
+      ESP_LOGW(TAG, "UDP sendto failed to %s, error: %d", target.str().c_str(), errno);
     }
   }
 }
 
-void NibeGwComponent::token_request_cache(AsyncUDPPacket &udp, uint8_t address, uint8_t token) {
-  if (!is_connected_) {
+void NibeGwComponent::recv_local_socket(std::unique_ptr<socket::Socket> &fd, int address, int token) {
+  request_data_type request(MAX_DATA_LEN);
+
+  socket_address from;
+  int n = fd->recvfrom(request.data(), request.size(), (sockaddr *) &from.storage, &from.len);
+  if (n < 0) {
+    if (errno != EAGAIN && errno != EWOULDBLOCK) {
+      ESP_LOGW(TAG, "recvfrom error on read socket: %d", errno);
+    }
     return;
   }
+  request.resize(n);
 
-  int size = udp.length();
-  if (size == 0) {
+  if (udp_sources_.size() &&
+      none_of(udp_sources_.begin(), udp_sources_.end(), [&](auto &source) { return from.matches(source); })) {
+    ESP_LOGW(TAG, "UDP Packet wrong ip ignored %s", from.str().c_str());
     return;
   }
+  ESP_LOGV(TAG, "Received UDP packet from %s, %d bytes", from.str().c_str(), n);
 
-  ESP_LOGV(TAG, "UDP Packet token data of %d bytes received", size);
-
-  if (size > MAX_DATA_LEN) {
-    ESP_LOGE(TAG, "UDP Packet too large: %d", size);
-    return;
+  if (n > 0) {
+    add_queued_request(address, token, std::move(request));
   }
-
-  network::IPAddress ip = udp.remoteIP();
-  if (udp_source_ip_.size() && std::count(udp_source_ip_.begin(), udp_source_ip_.end(), ip) == 0) {
-    ESP_LOGW(TAG, "UDP Packet wrong ip ignored %s", ip.str().c_str());
-    return;
-  }
-
-  request_data_type request;
-  request.assign(udp.data(), udp.data() + size);
-  add_queued_request(address, token, std::move(request));
 }
 
 static int copy_request(const request_data_type &request, uint8_t *data) {
@@ -118,31 +119,78 @@ void NibeGwComponent::setup() {
 
 void NibeGwComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "NibeGw");
-  for (auto target = udp_targets_.begin(); target != udp_targets_.end(); target++) {
-    ESP_LOGCONFIG(TAG, " Target: %s:%d", std::get<0>(*target).str().c_str(), std::get<1>(*target));
+  for (auto &&address : udp_targets_) {
+    ESP_LOGCONFIG(TAG, " Target: %s", address.str().c_str());
   }
-  for (auto address = udp_source_ip_.begin(); address != udp_source_ip_.end(); address++) {
-    ESP_LOGCONFIG(TAG, " Source: %s", address->str().c_str());
+  for (auto &&address : udp_sources_) {
+    ESP_LOGCONFIG(TAG, " Source: %s", address.str().c_str());
   }
   ESP_LOGCONFIG(TAG, " Read Port: %d", udp_read_port_);
   ESP_LOGCONFIG(TAG, " Write Port: %d", udp_write_port_);
 }
 
+std::unique_ptr<socket::Socket> NibeGwComponent::bind_local_socket(int port) {
+  auto fd = socket::socket_ip_loop_monitored(SOCK_DGRAM, 0);
+  if (fd) {
+    // Set non-blocking
+    fd->setblocking(true);
+
+    // Bind to write port
+    socket_address address(port);
+
+    if (fd->bind((sockaddr *) &address.storage, address.len) < 0) {
+      ESP_LOGE(TAG, "Failed to bind socket to port %d, error: %d", port, errno);
+      fd.release();
+    } else {
+      ESP_LOGI(TAG, "UDP socket bound to port %d", port);
+    }
+  } else {
+    ESP_LOGE(TAG, "Failed to create socket, error: %d", errno);
+  }
+  return fd;
+}
+
 void NibeGwComponent::loop() {
-  if (network::is_connected() && !is_connected_) {
-    ESP_LOGI(TAG, "Connecting network ports.");
-    udp_read_.listen(udp_read_port_);
-    udp_write_.listen(udp_write_port_);
-    is_connected_ = true;
+  // Handle network connection state
+
+  if (network::is_connected()) {
+    if (!is_connected_) {
+      ESP_LOGI(TAG, "Connecting network ports.");
+      is_connected_ = true;
+    }
+
+    // Create and bind read socket
+    if (!udp_read_) {
+      udp_read_ = bind_local_socket(udp_read_port_);
+    }
+
+    if (!udp_write_) {
+      udp_write_ = bind_local_socket(udp_write_port_);
+    }
+  } else {
+    if (is_connected_) {
+      ESP_LOGI(TAG, "Disconnecting network ports.");
+      is_connected_ = false;
+    }
+
+    if (udp_read_) {
+      udp_read_.release();
+    }
+    if (udp_write_) {
+      udp_write_.release();
+    }
   }
 
-  if (!network::is_connected() && is_connected_) {
-    ESP_LOGI(TAG, "Disconnecting network ports.");
-    udp_read_.close();
-    udp_write_.close();
-    is_connected_ = false;
+  // Poll sockets for incoming packets
+  if (udp_read_ && udp_read_->ready()) {
+    recv_local_socket(udp_read_, MODBUS40, READ_TOKEN);
   }
 
+  if (udp_write_ && udp_write_->ready()) {
+    recv_local_socket(udp_write_, MODBUS40, WRITE_TOKEN);
+  }
+
+  // Handle high frequency loop requirement
   if (gw_->messageStillOnProgress()) {
     high_freq_.start();
   } else {
