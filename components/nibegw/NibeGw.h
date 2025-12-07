@@ -36,7 +36,6 @@
 #ifndef NibeGw_h
 #define NibeGw_h
 
-#include <Arduino.h>
 #include "esphome/components/uart/uart.h"
 #include "esphome/core/gpio.h"
 #include <functional>
@@ -75,8 +74,8 @@ enum eStartByte {
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
 #define MAX_DATA_LEN 128
 
-typedef std::function<void(const byte *const data, int len)> callback_msg_received_type;
-typedef std::function<int(uint16_t address, byte command, byte *data)> callback_msg_token_received_type;
+typedef std::function<void(const uint8_t *const data, int len)> callback_msg_received_type;
+typedef std::function<int(uint16_t address, uint8_t command, uint8_t *data)> callback_msg_token_received_type;
 
 #define SMS40 0x16
 #define RMU40 0x19
@@ -91,7 +90,7 @@ class NibeGw {
   eState state;
   boolean connectionState;
   esphome::GPIOPin *directionPin;
-  byte buffer[MAX_DATA_LEN * 2];
+  uint8_t buffer[MAX_DATA_LEN * 2];
   size_t index;
   size_t indexSlave;
   esphome::uart::UARTDevice *RS485;
@@ -99,19 +98,19 @@ class NibeGw {
   callback_msg_token_received_type callback_msg_token_received;
   std::set<uint16_t> addressAcknowledge;
 
-  byte calculateChecksum(const byte *const data, byte len);
-  void sendData(const byte *const data, byte len);
+  uint8_t calculateChecksum(const uint8_t *const data, uint8_t len);
+  void sendData(const uint8_t *const data, uint8_t len);
   void sendBegin();
   void sendEnd();
   boolean shouldAckNakSend(uint16_t address);
-  void handleInvalidData(byte data);
+  void handleInvalidData(uint8_t data);
   void handleCrcFailure();
   void handleMsgReceived();
-  void handleDataReceived(byte b);
-  void handleExpectedAck(byte b);
+  void handleDataReceived(uint8_t b);
+  void handleExpectedAck(uint8_t b);
   void stateCompleteNak();
   void stateCompleteAck();
-  void stateComplete(byte data);
+  void stateComplete(uint8_t data);
 
   const char *TAG = "nibeGW";
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
@@ -130,7 +129,7 @@ class NibeGw {
   boolean messageStillOnProgress();
   void loop();
 
-  void setAcknowledge(byte address, boolean val) {
+  void setAcknowledge(uint8_t address, boolean val) {
     if (val)
       addressAcknowledge.insert(address);
     else

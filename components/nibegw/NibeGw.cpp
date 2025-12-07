@@ -70,7 +70,7 @@ boolean NibeGw::messageStillOnProgress() {
   return false;
 }
 
-void NibeGw::handleDataReceived(byte b) {
+void NibeGw::handleDataReceived(uint8_t b) {
   if (index >= MAX_DATA_LEN) {
     // too long message
     handleInvalidData(b);
@@ -139,14 +139,14 @@ void NibeGw::handleDataReceived(byte b) {
         break;
       }
 
-      const byte len = buffer[4];
+      const uint8_t len = buffer[4];
       if (index < len + 6) {
         // wait for start, address, cmd, len, data[len], checksum
         break;
       }
 
-      const byte checksum = buffer[len + 5];
-      const byte expected = calculateChecksum(&buffer[1], len + 4);
+      const uint8_t checksum = buffer[len + 5];
+      const uint8_t expected = calculateChecksum(&buffer[1], len + 4);
       if (checksum == expected) {
         handleMsgReceived();
       } else {
@@ -156,7 +156,7 @@ void NibeGw::handleDataReceived(byte b) {
   }
 }
 
-void NibeGw::handleExpectedAck(byte b) {
+void NibeGw::handleExpectedAck(uint8_t b) {
   buffer[index++] = b;
   ESP_LOGV(TAG, "Recv: %02X", b);
   if (b == STARTBYTE_ACK || b == STARTBYTE_NACK) {
@@ -170,10 +170,10 @@ void NibeGw::handleExpectedAck(byte b) {
   stateComplete(b);
 }
 
-void NibeGw::stateComplete(byte data) {
+void NibeGw::stateComplete(uint8_t data) {
   if (index) {
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
-    for (byte i = 0; i < index && i < DEBUG_BUFFER_LEN / 3; i++) {
+    for (uint8_t i = 0; i < index && i < DEBUG_BUFFER_LEN / 3; i++) {
       sprintf(debug_buf + i * 3, "%02X ", buffer[i]);
     }
     ESP_LOGV(TAG, "Recv: %s", debug_buf);
@@ -221,7 +221,7 @@ void NibeGw::handleCrcFailure() {
   }
 }
 
-void NibeGw::handleInvalidData(byte data) {
+void NibeGw::handleInvalidData(uint8_t data) {
   ESP_LOGW(TAG, "Had invalid message");
   stateComplete(data);
 }
@@ -231,15 +231,15 @@ void NibeGw::loop() {
     return;
 
   if (RS485->available() > 0) {
-    byte b = RS485->read();
+    uint8_t b = RS485->read();
     ESP_LOGVV(TAG, "%02X", b);
     handleDataReceived(b);
   }
 }
 
-byte NibeGw::calculateChecksum(const byte *const data, byte len) {
-  byte checksum = 0;
-  for (byte i = 0; i < len; i++) {
+uint8_t NibeGw::calculateChecksum(const uint8_t *const data, uint8_t len) {
+  uint8_t checksum = 0;
+  for (uint8_t i = 0; i < len; i++) {
     checksum ^= data[i];
   }
 
@@ -266,13 +266,13 @@ void NibeGw::sendEnd() {
   }
 }
 
-void NibeGw::sendData(const byte *const data, byte len) {
+void NibeGw::sendData(const uint8_t *const data, uint8_t len) {
   sendBegin();
   RS485->write_array(data, len);
   sendEnd();
 
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
-  for (byte i = 0; i < len && i < DEBUG_BUFFER_LEN / 3; i++) {
+  for (uint8_t i = 0; i < len && i < DEBUG_BUFFER_LEN / 3; i++) {
     sprintf(debug_buf + i * 3, "%02X ", data[i]);
   }
   ESP_LOGV(TAG, "Sent: %s", debug_buf);

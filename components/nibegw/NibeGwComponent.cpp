@@ -14,9 +14,9 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin *dir_pin) {
   udp_write_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, WRITE_TOKEN); });
 }
 
-static request_data_type dedup(const byte *const data, int len, byte val) {
+static request_data_type dedup(const uint8_t *const data, int len, uint8_t val) {
   request_data_type message;
-  byte value = ~val;
+  uint8_t value = ~val;
   for (int i = 5; i < len - 1; i++) {
     if (data[i] == val && value == val) {
       value = ~val;
@@ -28,9 +28,9 @@ static request_data_type dedup(const byte *const data, int len, byte val) {
   return message;
 }
 
-void NibeGwComponent::callback_msg_received(const byte *const data, int len) {
+void NibeGwComponent::callback_msg_received(const uint8_t *const data, int len) {
   {
-    request_key_type key{data[2] | (data[1] << 8), static_cast<byte>(data[3])};
+    request_key_type key{data[2] | (data[1] << 8), static_cast<uint8_t>(data[3])};
     const auto &it = message_listener_.find(key);
     if (it != message_listener_.end()) {
       it->second(dedup(data, len, STARTBYTE_MASTER));
@@ -49,7 +49,7 @@ void NibeGwComponent::callback_msg_received(const byte *const data, int len) {
   }
 }
 
-void NibeGwComponent::token_request_cache(AsyncUDPPacket &udp, byte address, byte token) {
+void NibeGwComponent::token_request_cache(AsyncUDPPacket &udp, uint8_t address, uint8_t token) {
   if (!is_connected_) {
     return;
   }
@@ -77,13 +77,13 @@ void NibeGwComponent::token_request_cache(AsyncUDPPacket &udp, byte address, byt
   add_queued_request(address, token, std::move(request));
 }
 
-static int copy_request(const request_data_type &request, byte *data) {
+static int copy_request(const request_data_type &request, uint8_t *data) {
   auto len = std::min(request.size(), (size_t) MAX_DATA_LEN);
   std::copy_n(request.begin(), len, data);
   return len;
 }
 
-int NibeGwComponent::callback_msg_token_received(uint16_t address, byte command, byte *data) {
+int NibeGwComponent::callback_msg_token_received(uint16_t address, uint8_t command, uint8_t *data) {
   request_key_type key{address, command};
 
   {
