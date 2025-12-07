@@ -36,15 +36,13 @@
 #ifndef NibeGw_h
 #define NibeGw_h
 
+#include <cstdint>
 #include "esphome/components/uart/uart.h"
 #include "esphome/core/gpio.h"
 #include <functional>
 #include <set>
 
 using namespace esphome;
-
-// #define HARDWARE_SERIAL_WITH_PINS
-// #define HARDWARE_SERIAL
 
 // state machine states
 enum eState {

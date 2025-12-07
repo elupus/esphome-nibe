@@ -7,30 +7,25 @@
 #include <cstdint>
 #include <map>
 
-#include "esphome.h"
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
+#include "esphome/core/log.h"
 #include "esphome/components/uart/uart.h"
+#include "esphome/components/network/ip_address.h"
+#include "esphome/components/network/util.h"
+#include "esphome/components/socket/socket.h"
 
 #include "NibeGw.h"
-
-#ifdef USE_ESP32
-#include <WiFi.h>
-#include "AsyncUDP.h"
-#endif
-
-#ifdef USE_ESP8266
-#include <ESP8266WiFi.h>
-#include "ESPAsyncUDP.h"
-#endif
+#include "NibeGwSockAddress.h"
 
 namespace esphome {
 namespace nibegw {
 
+using namespace std;
+
 typedef std::tuple<uint16_t, uint8_t> request_key_type;
 typedef std::vector<uint8_t> request_data_type;
 typedef std::function<request_data_type(void)> request_provider_type;
-typedef std::tuple<network::IPAddress, int> target_type;
 typedef std::function<void(const request_data_type &)> message_listener_type;
 
 class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDevice {
@@ -41,10 +36,10 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   const int requests_queue_max = 3;
   int udp_read_port_ = 9999;
   int udp_write_port_ = 10000;
-  std::vector<network::IPAddress> udp_source_ip_;
   bool is_connected_ = false;
 
-  std::vector<target_type> udp_targets_;
+  std::vector<socket_address> udp_sources_;
+  std::vector<socket_address> udp_targets_;
   std::map<request_key_type, std::queue<request_data_type>> requests_;
   std::map<request_key_type, request_provider_type> requests_provider_;
   std::map<request_key_type, message_listener_type> message_listener_;
@@ -52,14 +47,16 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
 
   NibeGw *gw_;
 
-  AsyncUDP udp_read_;
-  AsyncUDP udp_write_;
+  std::unique_ptr<socket::Socket> udp_read_;
+  std::unique_ptr<socket::Socket> udp_write_;
 
   void callback_msg_received(const uint8_t *data, int len);
   int callback_msg_token_received(uint16_t address, uint8_t command, uint8_t *data);
   void callback_debug(uint8_t verbose, char *data);
 
-  void token_request_cache(AsyncUDPPacket &udp, uint8_t address, uint8_t token);
+  void recv_local_socket(std::unique_ptr<socket::Socket> &fd, int address, int token);
+
+  std::unique_ptr<socket::Socket> bind_local_socket(int port);
 
  public:
   void set_read_port(int port) {
@@ -70,12 +67,11 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   };
 
   void add_target(const network::IPAddress &ip, int port) {
-    auto target = target_type(ip, port);
-    udp_targets_.push_back(target);
+    udp_targets_.push_back(socket_address(ip, port));
   }
 
   void add_source_ip(const network::IPAddress &ip) {
-    udp_source_ip_.push_back(ip);
+    udp_sources_.push_back(socket_address(ip, 0));
   };
 
   void set_request(int address, int token, request_data_type request) {
