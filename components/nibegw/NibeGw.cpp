@@ -45,7 +45,7 @@ void NibeGw::disconnect() {
   }
 }
 
-boolean NibeGw::connected() {
+bool NibeGw::connected() {
   return connectionState;
 }
 
@@ -57,7 +57,7 @@ NibeGw &NibeGw::setCallback(callback_msg_received_type callback_msg_received,
   return *this;
 }
 
-boolean NibeGw::messageStillOnProgress() {
+bool NibeGw::messageStillOnProgress() {
   if (!connectionState)
     return false;
 
@@ -299,6 +299,6 @@ void NibeGw::stateCompleteNak() {
   stateComplete(0);
 }
 
-boolean NibeGw::shouldAckNakSend(uint16_t address) {
+bool NibeGw::shouldAckNakSend(uint16_t address) {
   return addressAcknowledge.count(address) != 0;
 }
