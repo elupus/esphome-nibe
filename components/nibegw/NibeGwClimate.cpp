@@ -102,7 +102,7 @@ float get_s16_decimal(const uint8_t data[2], float scale, int offset) {
 request_data_type set_s16_decimal(float value, float scale, int offset) {
   int data;
   request_data_type result;
-  if (isnan(value)) {
+  if (std::isnan(value)) {
     data = int16_invalid;
   } else {
     data = (int) roundf(value / scale) - offset;
@@ -122,7 +122,7 @@ float get_u8_decimal(const uint8_t data[1], float scale, int offset) {
 
 request_data_type set_u8_decimal(float value, float scale, int offset) {
   int data;
-  if (isnan(value)) {
+  if (std::isnan(value)) {
     data = uint8_invalid;
   } else {
     data = (int) roundf(value / scale) - offset;
