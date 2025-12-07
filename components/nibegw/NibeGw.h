@@ -88,7 +88,7 @@ typedef std::function<int(uint16_t address, uint8_t command, uint8_t *data)> cal
 class NibeGw {
  private:
   eState state;
-  boolean connectionState;
+  bool connectionState;
   esphome::GPIOPin *directionPin;
   uint8_t buffer[MAX_DATA_LEN * 2];
   size_t index;
@@ -102,7 +102,7 @@ class NibeGw {
   void sendData(const uint8_t *const data, uint8_t len);
   void sendBegin();
   void sendEnd();
-  boolean shouldAckNakSend(uint16_t address);
+  bool shouldAckNakSend(uint16_t address);
   void handleInvalidData(uint8_t data);
   void handleCrcFailure();
   void handleMsgReceived();
@@ -125,24 +125,24 @@ class NibeGw {
 
   void connect();
   void disconnect();
-  boolean connected();
-  boolean messageStillOnProgress();
+  bool connected();
+  bool messageStillOnProgress();
   void loop();
 
-  void setAcknowledge(uint8_t address, boolean val) {
+  void setAcknowledge(uint8_t address, bool val) {
     if (val)
       addressAcknowledge.insert(address);
     else
       addressAcknowledge.erase(address);
   }
 
-  void setAckModbus40Address(boolean val) {
+  void setAckModbus40Address(bool val) {
     setAcknowledge(MODBUS40, val);
   }
-  void setAckSms40Address(boolean val) {
+  void setAckSms40Address(bool val) {
     setAcknowledge(SMS40, val);
   }
-  void setAckRmu40Address(boolean val) {
+  void setAckRmu40Address(bool val) {
     setAcknowledge(RMU40, val);
   }
 };
