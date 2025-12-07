@@ -52,17 +52,17 @@ enum RmuDataFlagsBits {
 
 #define RMU_DATA_FLAGS0_USE_ROOM_SENSOR_SX(index) (RMU_DATA_FLAGS0_USE_ROOM_SENSOR_S1 << (index))
 
-request_data_type build_request_data(byte token, request_data_type payload) {
+request_data_type build_request_data(uint8_t token, request_data_type payload) {
   request_data_type data = {
       STARTBYTE_SLAVE,
       token,
-      (byte) payload.size(),
+      (uint8_t) payload.size(),
   };
 
   for (auto &val : payload)
     data.push_back(val);
 
-  byte checksum = 0;
+  uint8_t checksum = 0;
   for (auto &val : data)
     checksum ^= val;
   if (checksum == 0x5c)
@@ -72,14 +72,14 @@ request_data_type build_request_data(byte token, request_data_type payload) {
 }
 
 request_data_type set_u16_index(int index, int value) {
-  return {(byte) index, (byte) (value & 0xff), (byte) ((value >> 8) & 0xff)};
+  return {(uint8_t) index, (uint8_t) (value & 0xff), (uint8_t) ((value >> 8) & 0xff)};
 }
 
 request_data_type set_u16(int value) {
-  return {(byte) (value & 0xff), (byte) ((value >> 8) & 0xff)};
+  return {(uint8_t) (value & 0xff), (uint8_t) ((value >> 8) & 0xff)};
 }
 
-uint16_t get_u16(const byte data[2]) {
+uint16_t get_u16(const uint8_t data[2]) {
   return (uint16_t) data[0] | ((uint16_t) data[1] << 8);
 }
 
@@ -95,7 +95,7 @@ float get_s16_decimal(uint16_t data, float scale, int offset) {
   return value * scale;
 }
 
-float get_s16_decimal(const byte data[2], float scale, int offset) {
+float get_s16_decimal(const uint8_t data[2], float scale, int offset) {
   return get_s16_decimal(get_u16(data), scale, offset);
 }
 
@@ -111,7 +111,7 @@ request_data_type set_s16_decimal(float value, float scale, int offset) {
   return result;
 }
 
-float get_u8_decimal(const byte data[1], float scale, int offset) {
+float get_u8_decimal(const uint8_t data[1], float scale, int offset) {
   int value = (int) data[0];
   value += offset;
   if (value >= uint8_invalid) {
