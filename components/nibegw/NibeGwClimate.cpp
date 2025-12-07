@@ -132,9 +132,8 @@ request_data_type set_u8_decimal(float value, float scale, int offset) {
 
 climate::ClimateTraits NibeGwClimate::traits() {
   auto traits = climate::ClimateTraits();
-  traits.set_supports_current_temperature(true);
+  traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
   traits.set_supported_modes({climate::CLIMATE_MODE_HEAT_COOL, climate::CLIMATE_MODE_AUTO});
-  traits.set_supports_two_point_target_temperature(false);
   traits.set_visual_min_temperature(5.0);
   traits.set_visual_max_temperature(30.5);
   traits.set_visual_temperature_step(0.5);
