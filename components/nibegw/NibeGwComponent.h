@@ -4,6 +4,7 @@
 #include <queue>
 #include <vector>
 #include <cstddef>
+#include <cstdint>
 #include <map>
 
 #include "esphome.h"
@@ -26,8 +27,8 @@
 namespace esphome {
 namespace nibegw {
 
-typedef std::tuple<uint16_t, byte> request_key_type;
-typedef std::vector<byte> request_data_type;
+typedef std::tuple<uint16_t, uint8_t> request_key_type;
+typedef std::vector<uint8_t> request_data_type;
 typedef std::function<request_data_type(void)> request_provider_type;
 typedef std::tuple<network::IPAddress, int> target_type;
 typedef std::function<void(const request_data_type &)> message_listener_type;
