@@ -74,7 +74,7 @@ enum eStartByte {
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
 #define MAX_DATA_LEN 128
 
-typedef std::function<void(const uint8_t *const data, int len)> callback_msg_received_type;
+typedef std::function<void(const uint8_t *data, int len)> callback_msg_received_type;
 typedef std::function<int(uint16_t address, uint8_t command, uint8_t *data)> callback_msg_token_received_type;
 
 #define SMS40 0x16
@@ -98,8 +98,8 @@ class NibeGw {
   callback_msg_token_received_type callback_msg_token_received;
   std::set<uint16_t> addressAcknowledge;
 
-  uint8_t calculateChecksum(const uint8_t *const data, uint8_t len);
-  void sendData(const uint8_t *const data, uint8_t len);
+  uint8_t calculateChecksum(const uint8_t *data, uint8_t len);
+  void sendData(const uint8_t *data, uint8_t len);
   void sendBegin();
   void sendEnd();
   bool shouldAckNakSend(uint16_t address);

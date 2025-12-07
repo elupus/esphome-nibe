@@ -54,7 +54,7 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   AsyncUDP udp_read_;
   AsyncUDP udp_write_;
 
-  void callback_msg_received(const uint8_t *const data, int len);
+  void callback_msg_received(const uint8_t *data, int len);
   int callback_msg_token_received(uint16_t address, uint8_t command, uint8_t *data);
   void callback_debug(uint8_t verbose, char *data);
 

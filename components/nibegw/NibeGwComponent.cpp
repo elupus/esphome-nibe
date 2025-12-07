@@ -14,7 +14,7 @@ NibeGwComponent::NibeGwComponent(esphome::GPIOPin *dir_pin) {
   udp_write_.onPacket([this](AsyncUDPPacket packet) { token_request_cache(packet, MODBUS40, WRITE_TOKEN); });
 }
 
-static request_data_type dedup(const uint8_t *const data, int len, uint8_t val) {
+static request_data_type dedup(const uint8_t *data, int len, uint8_t val) {
   request_data_type message;
   uint8_t value = ~val;
   for (int i = 5; i < len - 1; i++) {
@@ -28,7 +28,7 @@ static request_data_type dedup(const uint8_t *const data, int len, uint8_t val) 
   return message;
 }
 
-void NibeGwComponent::callback_msg_received(const uint8_t *const data, int len) {
+void NibeGwComponent::callback_msg_received(const uint8_t *data, int len) {
   {
     request_key_type key{data[2] | (data[1] << 8), static_cast<uint8_t>(data[3])};
     const auto &it = message_listener_.find(key);
