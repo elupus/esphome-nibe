@@ -34,12 +34,14 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   }
   const char *TAG = "nibegw";
   const int requests_queue_max = 3;
+  const uint32_t target_timeout_ms_ = 60000;
   int udp_read_port_ = 9999;
   int udp_write_port_ = 10000;
   bool is_connected_ = false;
 
   std::vector<socket_address> udp_sources_;
-  std::vector<socket_address> udp_targets_;
+  std::vector<socket_address> udp_targets_static_;
+  std::map<socket_address, uint32_t> udp_targets_;
   std::map<request_key_type, std::queue<request_data_type>> requests_;
   std::map<request_key_type, request_provider_type> requests_provider_;
   std::map<request_key_type, message_listener_type> message_listener_;
@@ -67,7 +69,7 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   };
 
   void add_target(const network::IPAddress &ip, int port) {
-    udp_targets_.push_back(socket_address(ip, port));
+    udp_targets_static_.push_back(socket_address(ip, port));
   }
 
   void add_source_ip(const network::IPAddress &ip) {

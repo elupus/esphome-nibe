@@ -78,7 +78,7 @@ TARGET_SCHEMA = cv.Schema(
 
 UDP_SCHEMA = cv.Schema(
     {
-        cv.Required(CONF_TARGET, []): cv.ensure_list(TARGET_SCHEMA),
+        cv.Optional(CONF_TARGET, []): cv.ensure_list(TARGET_SCHEMA),
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
         cv.Optional(CONF_SOURCE, []): cv.ensure_list(cv.ipv4address)
