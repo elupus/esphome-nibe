@@ -69,6 +69,12 @@ enum eStartByte {
   STARTBYTE_NACK = 0x15,
 };
 
+enum eParse {
+  PACKET_PENDING,
+  PACKET_ERR,
+  PACKET_OK,
+};
+
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
 #define MAX_DATA_LEN 128
 
@@ -126,6 +132,8 @@ class NibeGw {
   bool connected();
   bool messageStillOnProgress();
   void loop();
+  eParse checkSlaveData(const uint8_t *data, size_t len);
+  eParse checkMasterData(const uint8_t *data, size_t len);
 
   void setAcknowledge(uint8_t address, bool val) {
     if (val)
