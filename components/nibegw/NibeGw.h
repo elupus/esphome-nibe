@@ -36,15 +36,13 @@
 #ifndef NibeGw_h
 #define NibeGw_h
 
+#include <cstdint>
 #include "esphome/components/uart/uart.h"
 #include "esphome/core/gpio.h"
 #include <functional>
 #include <set>
 
 using namespace esphome;
-
-// #define HARDWARE_SERIAL_WITH_PINS
-// #define HARDWARE_SERIAL
 
 // state machine states
 enum eState {
@@ -69,6 +67,12 @@ enum eStartByte {
   STARTBYTE_SLAVE = 0xc0,
   STARTBYTE_ACK = 0x06,
   STARTBYTE_NACK = 0x15,
+};
+
+enum eParse {
+  PACKET_PENDING,
+  PACKET_ERR,
+  PACKET_OK,
 };
 
 // message buffer for RS-485 communication. Max message length is 80 bytes + 6 bytes header
@@ -128,6 +132,8 @@ class NibeGw {
   bool connected();
   bool messageStillOnProgress();
   void loop();
+  eParse checkSlaveData(const uint8_t *data, size_t len);
+  eParse checkMasterData(const uint8_t *data, size_t len);
 
   void setAcknowledge(uint8_t address, bool val) {
     if (val)

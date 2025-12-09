@@ -39,11 +39,6 @@ uart:
 # Configure NibeGW
 nibegw:
   udp:
-    # The target address(s) to send data to. May be a multicast address.
-    target:
-      - ip: 192.168.255.254
-        port: 10090
-
     # List of source address to accept data from, may be empty for no filter
     source:
       - 192.168.255.254

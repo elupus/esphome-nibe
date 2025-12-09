@@ -41,11 +41,6 @@ nibegw:
   uart_id: my_uart
 
   udp:
-    # The target address(s) to send data to. May also be multicast addresses.
-    target:
-      - ip: 192.168.255.254
-        port: 9999
-
     # List of source address to accept read/write from, may be empty for no filter, but
     # this is not recommended.
     source:

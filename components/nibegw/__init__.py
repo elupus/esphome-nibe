@@ -78,7 +78,7 @@ TARGET_SCHEMA = cv.Schema(
 
 UDP_SCHEMA = cv.Schema(
     {
-        cv.Required(CONF_TARGET, []): cv.ensure_list(TARGET_SCHEMA),
+        cv.Optional(CONF_TARGET, []): cv.ensure_list(TARGET_SCHEMA),
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
         cv.Optional(CONF_SOURCE, []): cv.ensure_list(cv.ipv4address)
@@ -108,14 +108,6 @@ async def to_code(config):
     )
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
-
-    if CORE.is_esp32:
-        cg.add_build_flag("-DHARDWARE_SERIAL_WITH_PINS")
-        cg.add_library("ESP32 Async UDP", None)
-
-    if CORE.is_esp8266:
-        cg.add_build_flag("-DHARDWARE_SERIAL")
-        cg.add_library("ESPAsyncUDP", None)
 
     if udp := config.get(CONF_UDP):
         for target in udp[CONF_TARGET]:
