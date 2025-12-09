@@ -109,14 +109,6 @@ async def to_code(config):
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
 
-    if CORE.is_esp32:
-        cg.add_build_flag("-DHARDWARE_SERIAL_WITH_PINS")
-        cg.add_library("ESP32 Async UDP", None)
-
-    if CORE.is_esp8266:
-        cg.add_build_flag("-DHARDWARE_SERIAL")
-        cg.add_library("ESPAsyncUDP", None)
-
     if udp := config.get(CONF_UDP):
         for target in udp[CONF_TARGET]:
             cg.add(var.add_target(IPAddress(str(target[CONF_TARGET_IP])), target[CONF_TARGET_PORT]))
