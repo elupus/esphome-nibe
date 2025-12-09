@@ -45,7 +45,7 @@ void NibeGwComponent::callback_msg_received(const uint8_t *data, int len) {
   }
 
   // Send to all UDP targets
-  for (auto &&target : udp_targets_) {
+  for (auto &&[target, timestamp] : udp_targets_) {
     int result = udp_read_->sendto(data, len, 0, (sockaddr *) &target.storage, target.len);
     if (result < 0) {
       ESP_LOGW(TAG, "UDP sendto failed to %s, error: %d", target.str().c_str(), errno);
@@ -71,11 +71,20 @@ void NibeGwComponent::recv_local_socket(std::unique_ptr<socket::Socket> &fd, int
     ESP_LOGW(TAG, "UDP Packet wrong ip ignored %s", from.str().c_str());
     return;
   }
-  ESP_LOGV(TAG, "Received UDP packet from %s, %d bytes", from.str().c_str(), n);
 
-  if (n > 0) {
-    add_queued_request(address, token, std::move(request));
+  if (gw_->checkSlaveData(request.data(), request.size()) != PACKET_OK) {
+    ESP_LOGW(TAG, "Received invalid packet from %s, %d bytes", from.str().c_str(), n);
+    return;
   }
+
+  /* store this as a new target */
+  uint32_t now = millis();
+  auto [it, inserted] = udp_targets_.insert_or_assign(from, now);
+  if (inserted) {
+    ESP_LOGI(TAG, "New target added %s", from.str().c_str());
+  }
+
+  add_queued_request(address, token, std::move(request));
 }
 
 static int copy_request(const request_data_type &request, uint8_t *data) {
@@ -119,7 +128,7 @@ void NibeGwComponent::setup() {
 
 void NibeGwComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "NibeGw");
-  for (auto &&address : udp_targets_) {
+  for (auto &&[address, timeout] : udp_targets_) {
     ESP_LOGCONFIG(TAG, " Target: %s", address.str().c_str());
   }
   for (auto &&address : udp_sources_) {
@@ -180,6 +189,16 @@ void NibeGwComponent::loop() {
       udp_write_.release();
     }
   }
+
+  uint32_t now = millis();
+
+  // Static targets are always active
+  for (auto &target : udp_targets_static_) {
+    udp_targets_[target] = now;
+  }
+
+  // Check for timeouts on targets
+  std::erase_if(udp_targets_, [&](const auto &item) { return now - item.second > target_timeout_ms_; });
 
   // Poll sockets for incoming packets
   if (udp_read_ && udp_read_->ready()) {
