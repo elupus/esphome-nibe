@@ -116,42 +116,35 @@ void NibeGw::handleDataReceived(uint8_t b) {
     case STATE_WAIT_DATA_SLAVE: {
       buffer[index++] = b;
 
-      // make sure we have start, cmd, len
-      if (index < indexSlave + 3) {
+      eParse check = checkSlaveData(&buffer[indexSlave], index - indexSlave);
+      if (check == PACKET_PENDING) {
         break;
       }
 
-      // make sure we have start, cmd, len, data[len], checksum
-      if (index < indexSlave + buffer[indexSlave + 2] + 4) {
+      if (check == PACKET_OK) {
+        ESP_LOGV(TAG, "Received token %02X and response", buffer[3]);
+        state = STATE_WAIT_ACK;
         break;
       }
 
-      ESP_LOGV(TAG, "Received token %02X and response", buffer[3]);
-      state = STATE_WAIT_ACK;
-    } break;
+      stateComplete(0);
+      break;
+    }
 
     case STATE_WAIT_DATA:
-
       buffer[index++] = b;
 
-      if (index < 5) {
-        // wait for start, address, cmd, len
+      eParse check = checkMasterData(buffer, index);
+      if (check == PACKET_PENDING) {
         break;
       }
 
-      const uint8_t len = buffer[4];
-      if (index < len + 6) {
-        // wait for start, address, cmd, len, data[len], checksum
-        break;
-      }
-
-      const uint8_t checksum = buffer[len + 5];
-      const uint8_t expected = calculateChecksum(&buffer[1], len + 4);
-      if (checksum == expected) {
+      if (check == PACKET_OK) {
         handleMsgReceived();
-      } else {
-        handleCrcFailure();
+        break;
       }
+
+      handleCrcFailure();
       break;
   }
 }
@@ -301,4 +294,59 @@ void NibeGw::stateCompleteNak() {
 
 bool NibeGw::shouldAckNakSend(uint16_t address) {
   return addressAcknowledge.count(address) != 0;
+}
+
+eParse NibeGw::checkSlaveData(const uint8_t *data, size_t len) {
+  /* start, cmd, len, data[len], checksum */
+  if (len < 4) {
+    return PACKET_PENDING;
+  }
+
+  if (data[0] != STARTBYTE_SLAVE) {
+    ESP_LOGD(TAG, "Slave start byte is invalid");
+    return PACKET_ERR;
+  }
+
+  if (len - 4 < data[2]) {
+    return PACKET_PENDING;
+  }
+
+  if (len - 4 != data[2]) {
+    ESP_LOGD(TAG, "Slave packet has invalid size");
+    return PACKET_ERR;
+  }
+
+  const uint8_t checksum = calculateChecksum(data, len - 1);
+  if (data[len - 1] != checksum) {
+    ESP_LOGD(TAG, "Slave data checksum is invalid");
+    return PACKET_ERR;
+  }
+  return PACKET_OK;
+}
+
+eParse NibeGw::checkMasterData(const uint8_t *data, size_t len) {
+  /* start, address1, address2, cmd, len, data[len], checksum */
+  if (len < 6) {
+    return PACKET_PENDING;
+  }
+  if (data[0] != STARTBYTE_MASTER) {
+    ESP_LOGD(TAG, "Master start byte is invalid");
+    return PACKET_ERR;
+  }
+
+  if (len - 6 < data[4]) {
+    return PACKET_PENDING;
+  }
+
+  if (len - 6 != data[4]) {
+    ESP_LOGD(TAG, "Master packet too large");
+    return PACKET_ERR;
+  }
+
+  const uint8_t checksum = calculateChecksum(&data[1], len - 2);
+  if (data[len - 1] != checksum) {
+    ESP_LOGD(TAG, "Master data checksum is invalid");
+    return PACKET_ERR;
+  }
+  return PACKET_OK;
 }
