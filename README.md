@@ -55,9 +55,6 @@ uart:
 
 nibegw:
   udp:
-    target:
-      - ip: 192.168.16.130
-
     source:
       - 192.168.16.130
 
@@ -93,6 +90,12 @@ nibegw:
 
   udp:
     # The target address(s) to send data to. May also be multicast addresses.
+    # the gateway will automatically populate this based on valid requests
+    # entering on the read and write port and will remain valid for one
+    # minute after last request.
+    #
+    # If you want a passive listener that never requests data, you can add
+    # an explicit target address here.
     target:
       - ip: 192.168.16.130
         port: 9999
