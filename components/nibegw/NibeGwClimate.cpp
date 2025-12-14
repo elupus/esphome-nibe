@@ -165,7 +165,7 @@ void NibeGwClimate::publish_set_point(float value) {
 void NibeGwClimate::dump_config() {
   ESP_LOGCONFIG(TAG, "NibeGw Climate");
   ESP_LOGCONFIG(TAG, " Address: 0x%x", address_);
-  ESP_LOGCONFIG(TAG, " Sensor: %s", sensor_->get_name());
+  ESP_LOGCONFIG(TAG, " Sensor: %s", sensor_->get_name().c_str());
   dump_traits_(TAG);
 }
 
@@ -245,7 +245,7 @@ void NibeGwClimate::setup() {
 
   this->gw_->add_listener(address_, RMU_DATA_MSG, [this](const request_data_type &message) {
     if (message.size() < RMU_DATA_OFFSET_MAX) {
-      ESP_LOGW(TAG, "Invalid data length: %d", message.size());
+      ESP_LOGW(TAG, "Invalid data length: %zu", message.size());
       return;
     }
 
