@@ -102,9 +102,9 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
 
   NibeGwComponent(GPIOPin *dir_pin);
 
-  void setup();
-  void dump_config();
-  void loop();
+  void setup() override;
+  void dump_config() override;
+  void loop() override;
 };
 
 }  // namespace nibegw

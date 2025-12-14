@@ -17,7 +17,7 @@ class NibeGwComponent;
 class NibeGwClimate : public climate::Climate, public Component {
  public:
   void setup() override;
-  void dump_config();
+  void dump_config() override;
   void set_sensor(sensor::Sensor *sensor) {
     this->sensor_ = sensor;
   }
