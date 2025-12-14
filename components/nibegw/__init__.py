@@ -10,7 +10,8 @@ from esphome.const import (
 from esphome import pins
 from esphome.components.network import IPAddress
 from enum import IntEnum, Enum
-from esphome.components import uart
+from esphome.components import uart, socket
+from esphome.types import ConfigType
 
 AUTO_LOAD = ["sensor", "climate"]
 DEPENDENCIES = ["logger"]
@@ -70,6 +71,43 @@ def real_enum(enum: Enum):
     return cv.enum({i.name: i.value for i in enum})
 
 
+def _consume_nibegw_sockets(config: ConfigType) -> ConfigType:
+    """Register socket needs for nibegw component."""
+    # MQTT needs 1 socket for the broker connection
+    udp = config[CONF_UDP]
+    socket_count = len(udp[CONF_PORTS])
+    socket.consume_sockets(socket_count, "nibegw")(config)
+    return config
+
+
+def _upgrade_ports(config: ConfigType) -> ConfigType:
+    udp = config[CONF_UDP]
+    if port_number := udp[CONF_WRITE_PORT]:
+        udp[CONF_PORTS].insert(
+            0,
+            PORTS_SCHEMA(
+                {
+                    CONF_PORT: port_number,
+                    CONF_ADDRESS: Addresses.MODBUS40.value,
+                    CONF_TOKEN: Token.MODBUS_WRITE.value,
+                }
+            ),
+        )
+    if port_number := udp[CONF_READ_PORT]:
+        udp[CONF_PORTS].insert(
+            0,
+            PORTS_SCHEMA(
+                {
+                    CONF_PORT: port_number,
+                    CONF_ADDRESS: Addresses.MODBUS40.value,
+                    CONF_TOKEN: Token.MODBUS_READ.value,
+                }
+            ),
+        )
+
+    return config
+
+
 CONSTANTS_SCHEMA = cv.Schema(
     {
         cv.Required(CONF_ADDRESS): cv.Any(real_enum(Addresses), int),
@@ -104,7 +142,7 @@ UDP_SCHEMA = cv.Schema(
     }
 )
 
-CONFIG_SCHEMA = (
+CONFIG_SCHEMA = cv.All(
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(NibeGwComponent),
@@ -117,7 +155,9 @@ CONFIG_SCHEMA = (
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
-    .extend(uart.UART_DEVICE_SCHEMA)
+    .extend(uart.UART_DEVICE_SCHEMA),
+    _upgrade_ports,
+    _consume_nibegw_sockets,
 )
 
 
@@ -142,18 +182,6 @@ async def to_code(config):
                 )
             )
 
-        if port_number := udp[CONF_READ_PORT]:
-            cg.add(
-                var.add_socket_request(
-                    Addresses.MODBUS40.value, Token.MODBUS_READ.value, port_number
-                )
-            )
-        if port_number := udp[CONF_WRITE_PORT]:
-            cg.add(
-                var.add_socket_request(
-                    Addresses.MODBUS40.value, Token.MODBUS_WRITE.value, port_number
-                )
-            )
         for port in udp[CONF_PORTS]:
             cg.add(
                 var.add_socket_request(
