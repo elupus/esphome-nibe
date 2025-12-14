@@ -1,0 +1,53 @@
+esphome:
+  name: nibegw
+  comment: Nibegw
+esp32:
+  board: lolin_d32
+# Example is for a LolinD32 Board, use your own from here: https://esphome.io/components/esp32.html
+
+# No API if you are using MQTT, password is optional
+api:
+  password: !secret api_password
+ota:
+  - platform: esphome
+    password: !secret ota_password
+logger:
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  #fast_connect: true # --> Use fast_connect if you connecting to a hidden network
+
+  # Optional: Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "ESP D32 Nibe Proxy AP"
+    password: !secret ap_password
+# Load nibe component
+external_components:
+  - source: ../components
+uart:
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  baud_rate: 9600
+# Configure NibeGW
+nibegw:
+  udp:
+    # List of source address to accept data from, may be empty for no filter
+    source:
+      - 192.168.255.254
+  acknowledge:
+    - MODBUS40
+  # Constant replies to certain requests cabe made
+  constants:
+    - address: MODBUS40
+      token: ACCESSORY
+      data: [0x0A, # MODBUS version low
+        0x00, # MODBUS version high
+        0x01, # MODBUS address?
+      ]
+# Some helper functions to restart ESPHome from HA
+button:
+  - platform: restart
+    name: Nibegw Restart
+  - platform: safe_mode
+    name: Nibegw Safe Mode Boot

@@ -11,13 +11,13 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret OTA_PASSWORD
+    password: !secret ota_password
 
 logger:
 
 wifi:
-  ssid: !secret WIFI_SSID
-  password: !secret WIFI_PASSWORD
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
   fast_connect: true # Fast connect to connect to my hidden network
   # It is recommended to disable powersave mode on wifi, to make sure the device does not miss UDP requests sent.
   power_save_mode: none
