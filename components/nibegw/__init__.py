@@ -39,12 +39,15 @@ CONF_DATA = "data"
 CONF_CONSTANTS = "constants"
 
 class Addresses(IntEnum):
+    AXC40 = 0x05
     MODBUS40 = 0x20
     SMS40 = 0x16
     RMU40_S1 = 0x19
     RMU40_S2 = 0x1A
     RMU40_S3 = 0x1B
     RMU40_S4 = 0x1C
+    DEH500 = 0x27
+    EME20 = 0xA4
 
 class Token(IntEnum):
   MODBUS_READ = 0x69

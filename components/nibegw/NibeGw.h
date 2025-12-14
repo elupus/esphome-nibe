@@ -81,6 +81,7 @@ enum eParse {
 typedef std::function<void(const uint8_t *data, int len)> callback_msg_received_type;
 typedef std::function<int(uint16_t address, uint8_t command, uint8_t *data)> callback_msg_token_received_type;
 
+#define AXC40 0x05
 #define SMS40 0x16
 #define RMU40 0x19
 #define RMU40_S1 0x19
@@ -88,6 +89,8 @@ typedef std::function<int(uint16_t address, uint8_t command, uint8_t *data)> cal
 #define RMU40_S3 0x1B
 #define RMU40_S4 0x1C
 #define MODBUS40 0x20
+#define DEH500 0x27
+#define EME20 0xA4
 
 class NibeGw {
  private:
