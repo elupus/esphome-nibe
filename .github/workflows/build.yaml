@@ -1,0 +1,36 @@
+name: Build firmware for samples
+
+on: 
+  pull_request:
+  release:
+        
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v3
+      - id: set-matrix
+        run: echo "matrix=$(ls examples/*.yaml | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+  run-matrix:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+        matrix:
+            target: ${{ fromJson(needs.setup.outputs.matrix) }}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v3
+
+      - name: "Prepare configuration"
+        run: |
+          yq -n 'load("${{matrix.target}}") * load(".ci/replace.yaml")' > .ci/config.yaml
+          cat .ci/config.yaml
+
+      - name: "Build"
+        uses: esphome/build-action@v7
+        id: esphome-build-esp32
+        with:
+          yaml-file: .ci/config.yaml
