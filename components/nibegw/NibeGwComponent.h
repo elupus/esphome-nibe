@@ -40,7 +40,7 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   }
   const char *TAG = "nibegw";
   const int requests_queue_max = 3;
-  const uint32_t target_timeout_ms_ = 60000;
+  const uint32_t target_timeout_ms_ = 120000;
   bool is_connected_ = false;
 
   std::vector<socket_address> udp_sources_;
