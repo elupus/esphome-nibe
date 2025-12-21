@@ -197,11 +197,7 @@ void NibeGw::handleMsgReceived() {
       stateCompleteAck();
     }
   } else {
-    if (len == 0) {
-      state = STATE_WAIT_START_SLAVE;
-    } else {
-      state = STATE_WAIT_ACK;
-    }
+    state = STATE_WAIT_START_SLAVE;
   }
 }
 
