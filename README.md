@@ -20,6 +20,9 @@ Another board that should work but isn't tested is the [LILYGO® T-RSC3 ESP32-C3
 
 If your heat pump has very old software, consider updating it first: [myUplink Firmware Downloads](https://myuplink.com/update-firmware)
 
+> [!NOTE]
+> esp8266 boards are currently not supported due to lack of UDP socket abstraction support in esphome.
+
 ### Wifi power save mode
 It is recommended to disable powersave mode on wifi, to make sure the device does not miss UDP requests sent.
 
@@ -27,6 +30,7 @@ It is recommended to disable powersave mode on wifi, to make sure the device doe
 wifi:
   power_save_mode: none
 ```
+
 ### Sharing pins with logger
 If you are using the same uart as used for the normal logger component, make sure to disable the logger's output to uart.
 
