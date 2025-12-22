@@ -152,7 +152,7 @@ std::unique_ptr<socket::Socket> NibeGwComponent::bind_local_socket(int port) {
 
     if (fd->bind((sockaddr *) &address.storage, address.len) < 0) {
       ESP_LOGE(TAG, "Failed to bind socket to port %d, error: %d", port, errno);
-      fd.release();
+      fd.reset();
     } else {
       ESP_LOGI(TAG, "UDP socket bound to port %d", port);
     }
@@ -165,7 +165,8 @@ std::unique_ptr<socket::Socket> NibeGwComponent::bind_local_socket(int port) {
 void NibeGwComponent::run_request_socket(const request_key_type &key, request_socket_type &data) {
   if (!is_connected_) {
     if (data.socket) {
-      data.socket.release();
+      ESP_LOGI(TAG, "UDP socket released for port %d", data.port);
+      data.socket.reset();
     }
     return;
   }
