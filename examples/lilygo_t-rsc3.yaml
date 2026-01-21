@@ -1,0 +1,133 @@
+# demo for LILYGO® T-RSC3 ESP32-C3
+# with working config
+# basn 2025-05-23
+
+substitutions:
+  devicename: "nibegw"
+  homeassistant: "home-assistants ip address"
+  sensorname: "your home-assistant sensor"
+
+esphome:
+  name: ${devicename}
+  comment: "NibeGW"
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: ESP32C3
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret encryption
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none  
+  fast_connect: True
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${devicename}-AP"
+
+captive_portal:
+
+# Enable Web server
+web_server:
+  port: 80
+
+#output:
+#  - platform: gpio
+#    id: ENABLE_PIN # Enable the chip
+#    pin:
+#      number: GPIO5
+#      inverted: true
+
+uart:
+  rx_pin: GPIO3
+  tx_pin: GPIO10
+  baud_rate: 9600
+
+# Load nibe component
+external_components:
+  - source: github://elupus/esphome-nibe
+
+# Configure NibeGW
+nibegw:
+  dir_pin:
+    number: 5
+    inverted: false
+
+  udp:
+    # The target address(s) to send data to. May be a multicast address.
+    target:
+      - ip: ${homeassistant}
+        port: 9999
+
+    # List of source address to accept data from, may be empty for no filter
+    source:
+      - ${homeassistant}
+    read_port: 9999
+    write_port: 10000
+
+  acknowledge:
+    - MODBUS40
+    - RMU40_S1
+
+  # Constant replies to certain requests cabe made
+  constants:
+    - address: MODBUS40
+      token: ACCESSORY
+      data: [
+            0x0A, # MODBUS version low
+            0x00, # MODBUS version high
+            0x01, # MODBUS address?
+      ]
+
+    # Accessory version response
+    - address: RMU40_S1
+      token: ACCESSORY
+      data: [
+            0xEE, # RMU ?
+            0x03, # RMU version low
+            0x01, # RMU version high
+      ]
+    # Unknown response that nibepi uses
+    - address: RMU40_S1
+      token: RMU_DATA
+      command: RMU_WRITE
+      data: [
+            0x63,
+            0x00,
+      ]
+
+    # Constant fixed temperature to avoid pump going into alarm.
+    - address: RMU40_S1
+      token: RMU_WRITE
+      data: [
+            0x06, # Temperature
+            0x14, # degrees low
+            0x00, # degrees high
+      ]
+
+climate:
+  - platform: nibegw
+    name: s1
+    sensor: current_temperature_s1
+    system: 1
+
+sensor:
+  - platform: homeassistant
+    id: current_temperature_s1
+    entity_id: ${sensorname}
+
+# Some helper functions to restart ESPHome from HA
+button:
+- platform: restart
+  name: ${devicename} restart
+- platform: safe_mode
+  name: ${devicename} Safe Mode Boot
