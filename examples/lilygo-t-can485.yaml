@@ -10,6 +10,8 @@ esp32:
 # General ESPHome setup
 api:
   reboot_timeout: 0s
+  encryption:
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome

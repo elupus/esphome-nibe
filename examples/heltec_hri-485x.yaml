@@ -17,6 +17,8 @@ api:
     switch.turn_on: HAOnlineLed
   on_client_disconnected:
     switch.turn_off: HAOnlineLed
+  encryption:
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
