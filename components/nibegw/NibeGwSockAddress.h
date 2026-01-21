@@ -5,12 +5,9 @@
 #include <sstream>
 #include <cstdint>
 #include "esphome/components/socket/socket.h"
+#include "esphome/components/network/ip_address.h"
 
 namespace esphome {
-
-namespace socket {
-extern std::string format_sockaddr(const struct sockaddr_storage &storage);
-}
 
 namespace nibegw {
 
@@ -32,24 +29,15 @@ struct socket_address {
   }
 
   socket_address(const network::IPAddress &ip, int port) {
-    len = socket::set_sockaddr((sockaddr *) &storage, sizeof(storage), ip.str(), port);
+    char buf[network::IP_ADDRESS_BUFFER_SIZE];
+    len = socket::set_sockaddr((sockaddr *) &storage, sizeof(storage), ip.str_to(buf), port);
   }
 
   socket_address(int port) {
     len = socket::set_sockaddr_any((sockaddr *) &storage, sizeof(storage), port);
   }
 
-  std::string str() const {
-    std::string s = socket::format_sockaddr(storage);
-    if (storage.ss_family == AF_INET) {
-      const auto *a = reinterpret_cast<const sockaddr_in *>(&storage);
-      uint16_t port = ntohs(a->sin_port);
-      if (port != 0) {
-        s += ":" + std::to_string(port);
-      }
-    }
-    return s;
-  }
+  std::string str() const;
 
   bool valid() const {
     return len != 0;
