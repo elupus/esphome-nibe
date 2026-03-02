@@ -63,8 +63,8 @@ std::string socket_address::str() const {
     const auto *addr = reinterpret_cast<const struct sockaddr_in6 *>(&storage);
     if (esphome_inet_ntop6(&addr->sin6_addr, buf.data(), buf.capacity()) != nullptr)
       buf.resize(strlen(buf.data()));
-    if (addr->sin_port != 0) {
-      buf += ":" + std::to_string(ntohs(addr->sin_port));
+    if (addr->sin6_port != 0) {
+      buf += ":" + std::to_string(ntohs(addr->sin6_port));
     }
     return buf;
   }
