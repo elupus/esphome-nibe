@@ -5,11 +5,12 @@ esphome:
 esp32:
   board: esp32-s3-devkitc-1
   framework:
-    type: arduino
+    type: esp-idf
 
 # No API if you are using MQTT, password is optional
 api:
-  key: !secret api_encryption_key
+  encryption:
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
@@ -60,7 +61,7 @@ nibegw:
   udp:
     # List of source address to accept data from, may be empty for no filter
     source:
-      - 192.168.255.254
+      - 192.168.1.29
 
   acknowledge:
     - MODBUS40
@@ -79,4 +80,5 @@ nibegw:
 button:
 - platform: restart
   name: Nibegw Restart
-  
+- platform: safe_mode
+  name: Nibegw Safe Mode Boot
