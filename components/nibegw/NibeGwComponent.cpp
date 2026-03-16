@@ -55,7 +55,7 @@ void NibeGwComponent::callback_msg_received(const uint8_t *data, int len) {
   }
 }
 
-void NibeGwComponent::recv_local_socket(std::unique_ptr<socket::Socket> &fd, int address, int token) {
+void NibeGwComponent::recv_local_socket(socket_ptr_type &fd, int address, int token) {
   request_data_type request(MAX_DATA_LEN);
 
   socket_address from;
@@ -141,7 +141,7 @@ void NibeGwComponent::dump_config() {
   }
 }
 
-std::unique_ptr<socket::Socket> NibeGwComponent::bind_local_socket(int port) {
+socket_ptr_type NibeGwComponent::bind_local_socket(int port) {
   auto fd = socket::socket_ip_loop_monitored(SOCK_DGRAM, 0);
   if (fd) {
     // Set non-blocking

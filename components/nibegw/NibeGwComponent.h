@@ -11,6 +11,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/gpio.h"
 #include "esphome/core/log.h"
+#include "esphome/core/version.h"
 #include "esphome/components/uart/uart.h"
 #include "esphome/components/network/ip_address.h"
 #include "esphome/components/network/util.h"
@@ -29,9 +30,15 @@ typedef std::vector<uint8_t> request_data_type;
 typedef std::function<request_data_type(void)> request_provider_type;
 typedef std::function<void(const request_data_type &)> message_listener_type;
 
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)
+typedef std::unique_ptr<socket::ListenSocket> socket_ptr_type;
+#else
+typedef std::unique_ptr<socket::Socket> socket_ptr_type;
+#endif
+
 struct request_socket_type {
   int port;
-  std::unique_ptr<socket::Socket> socket;
+  socket_ptr_type socket;
 };
 
 class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDevice {
@@ -59,9 +66,9 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   void callback_debug(uint8_t verbose, char *data);
 
   void run_request_socket(const request_key_type &key, request_socket_type &data);
-  void recv_local_socket(std::unique_ptr<socket::Socket> &fd, int address, int token);
+  void recv_local_socket(socket_ptr_type &fd, int address, int token);
 
-  std::unique_ptr<socket::Socket> bind_local_socket(int port);
+  socket_ptr_type bind_local_socket(int port);
 
  public:
   void add_target(const network::IPAddress &ip, int port) {
