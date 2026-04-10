@@ -1,5 +1,7 @@
 #include "NibeGwComponent.h"
 
+#include "esphome/core/application.h"
+
 namespace esphome {
 
 namespace nibegw {
@@ -82,7 +84,7 @@ void NibeGwComponent::recv_local_socket(socket_ptr_type &fd, int address, int to
   }
 
   /* store this as a new target */
-  uint32_t now = millis();
+  uint32_t now = App.get_loop_component_start_time();
   if (now == 0) {
     // 0 indicates static targets; avoid using 0 for dynamic targets
     now++;
@@ -209,7 +211,7 @@ void NibeGwComponent::loop() {
     }
   }
 
-  uint32_t now = millis();
+  uint32_t now = App.get_loop_component_start_time();
 
   if (!udp_sources_.size()) {
     // Check for timeouts on dynamic targets
