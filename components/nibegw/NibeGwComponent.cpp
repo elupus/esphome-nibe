@@ -83,6 +83,10 @@ void NibeGwComponent::recv_local_socket(socket_ptr_type &fd, int address, int to
 
   /* store this as a new target */
   uint32_t now = millis();
+  if (now == 0) {
+    // 0 indicates static targets; avoid using 0 for dynamic targets
+    now++;
+  }
   auto [it, inserted] = udp_targets_.insert_or_assign(from, now);
   if (inserted) {
     ESP_LOGI(TAG, "New target added %s", from.str().c_str());
@@ -127,6 +131,10 @@ int NibeGwComponent::callback_msg_token_received(uint16_t address, uint8_t comma
 
 void NibeGwComponent::setup() {
   ESP_LOGI(TAG, "Starting up");
+  // Add static targets to the dynamic list
+  for (auto &target : udp_targets_static_) {
+    udp_targets_[target] = 0;
+  }
   gw_->connect();
 }
 
@@ -208,12 +216,8 @@ void NibeGwComponent::loop() {
   uint32_t now = millis();
 
   if (!udp_sources_.size()) {
-    // Static targets are always active
-    for (auto &target : udp_targets_static_) {
-      udp_targets_[target] = now;
-    }
     // Check for timeouts on dynamic targets
-    std::erase_if(udp_targets_, [&](const auto &item) { return now - item.second > TARGET_TIMEOUT_MS; });
+    std::erase_if(udp_targets_, [&](const auto &item) { return item.second > 0 && now - item.second > TARGET_TIMEOUT_MS; });
   }
 
   // Poll sockets for incoming packets
