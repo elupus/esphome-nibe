@@ -131,10 +131,6 @@ int NibeGwComponent::callback_msg_token_received(uint16_t address, uint8_t comma
 
 void NibeGwComponent::setup() {
   ESP_LOGI(TAG, "Starting up");
-  // Add static targets to the dynamic list
-  for (auto &target : udp_targets_static_) {
-    udp_targets_[target] = 0;
-  }
   gw_->connect();
 }
 
