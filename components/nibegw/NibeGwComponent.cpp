@@ -207,13 +207,14 @@ void NibeGwComponent::loop() {
 
   uint32_t now = millis();
 
-  // Static targets are always active
-  for (auto &target : udp_targets_static_) {
-    udp_targets_[target] = now;
+  if (!udp_sources_.size()) {
+    // Static targets are always active
+    for (auto &target : udp_targets_static_) {
+      udp_targets_[target] = now;
+    }
+    // Check for timeouts on dynamic targets
+    std::erase_if(udp_targets_, [&](const auto &item) { return now - item.second > TARGET_TIMEOUT_MS; });
   }
-
-  // Check for timeouts on targets
-  std::erase_if(udp_targets_, [&](const auto &item) { return now - item.second > TARGET_TIMEOUT_MS; });
 
   // Poll sockets for incoming packets
   for (auto &[key, data] : requests_sockets_) {
