@@ -1,5 +1,7 @@
 #include "NibeGwComponent.h"
 
+#include "esphome/core/application.h"
+
 namespace esphome {
 
 namespace nibegw {
@@ -82,7 +84,11 @@ void NibeGwComponent::recv_local_socket(socket_ptr_type &fd, int address, int to
   }
 
   /* store this as a new target */
-  uint32_t now = millis();
+  uint32_t now = App.get_loop_component_start_time();
+  if (now == 0) {
+    // 0 indicates static targets; avoid using 0 for dynamic targets
+    now++;
+  }
   auto [it, inserted] = udp_targets_.insert_or_assign(from, now);
   if (inserted) {
     ESP_LOGI(TAG, "New target added %s", from.str().c_str());
@@ -132,17 +138,19 @@ void NibeGwComponent::setup() {
 
 void NibeGwComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "NibeGw");
-  for (auto &&[address, timeout] : udp_targets_) {
+  for (auto &&[address, last_seen] : udp_targets_) {
     ESP_LOGCONFIG(TAG, " Target: %s", address.str().c_str());
   }
   for (auto &&address : udp_sources_) {
     ESP_LOGCONFIG(TAG, " Source: %s", address.str().c_str());
   }
-  for (auto const &x : requests_sockets_) {
-    ESP_LOGCONFIG(TAG, " Handler %x:%x Port: %d", std::get<0>(x.first), std::get<1>(x.first), x.second.port);
+  for (const auto &[key, value] : requests_sockets_) {
+    const auto &[address, req] = key;
+    ESP_LOGCONFIG(TAG, " Handler %x:%x Port: %d", address, req, value.port);
   }
-  for (auto const &x : message_listeners_) {
-    ESP_LOGCONFIG(TAG, " Listeners %x:%x Count: %zu", std::get<0>(x.first), std::get<1>(x.first), x.second.size());
+  for (const auto &[key, value] : message_listeners_) {
+    const auto &[address, req] = key;
+    ESP_LOGCONFIG(TAG, " Listeners %x:%x Count: %zu", address, req, value.size());
   }
 }
 
@@ -205,15 +213,15 @@ void NibeGwComponent::loop() {
     }
   }
 
-  uint32_t now = millis();
+  uint32_t now = App.get_loop_component_start_time();
 
-  // Static targets are always active
-  for (auto &target : udp_targets_static_) {
-    udp_targets_[target] = now;
+  if (!udp_sources_.size()) {
+    // Check for timeouts on dynamic targets
+    std::erase_if(udp_targets_, [&](const auto& item) {
+      const auto& [address, last_seen] = item;
+      return last_seen > 0 && now - last_seen > TARGET_TIMEOUT_MS;
+    });
   }
-
-  // Check for timeouts on targets
-  std::erase_if(udp_targets_, [&](const auto &item) { return now - item.second > TARGET_TIMEOUT_MS; });
 
   // Poll sockets for incoming packets
   for (auto &[key, data] : requests_sockets_) {
