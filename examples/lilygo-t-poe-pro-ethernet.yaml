@@ -1,0 +1,106 @@
+substitutions:
+  device_name: nibegw
+  device_friendly_name: "NibeGW"
+  device_description: "Nibe RS485 to UDP gateway on LilyGO T-POE-PRO"
+
+esphome:
+  name: ${device_name}
+  friendly_name: "${device_friendly_name}"
+  comment: "${device_description}"
+  name_add_mac_suffix: false
+
+esp32:
+  variant: esp32
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.1"
+      sram1_as_iram: true
+
+logger:
+  level: INFO
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk:
+    pin: GPIO0
+    mode: CLK_OUT
+  phy_addr: 0
+  power_pin: GPIO5
+  # Documentation-only addresses; replace them with values from your network.
+  # Static IP disabled; configure a DHCP reservation for 192.0.2.24 instead.
+  # manual_ip:
+  #   static_ip: 192.0.2.24
+  #   gateway: 192.0.2.254
+  #   subnet: 255.255.255.0
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/elupus/esphome-nibe.git
+      ref: master
+    components: [nibegw]
+
+uart:
+  # The T-POE-PRO uses an automatic-direction MAX13487E transceiver.
+  # LilyGO's dedicated RS485 examples use RX=32 and TX=33.
+  id: nibe_uart
+  rx_pin: GPIO32
+  tx_pin: GPIO33
+  baud_rate: 9600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+
+nibegw:
+  uart_id: nibe_uart
+
+  udp:
+    # Forward Nibe telegrams to this destination. Valid read/write requests
+    # also refresh the learned destination for one minute after the last request.
+    target:
+      - ip: 192.0.2.25
+        port: 9999
+
+    # Only accept read/write requests from this address.
+    source:
+      - 192.0.2.25
+
+    # Optional read and write request ports. These are the defaults.
+    read_port: 9999
+    write_port: 10000
+
+  acknowledge:
+    - MODBUS40
+
+  # Constant replies to certain requests can be made.
+  constants:
+    - address: MODBUS40
+      token: ACCESSORY
+      data: [
+            0x0A, # MODBUS version low
+            0x00, # MODBUS version high
+            0x01, # MODBUS address?
+      ]
+
+button:
+  - platform: restart
+    name: Restart
+
+sensor:
+  - platform: uptime
+    name: "${device_friendly_name} Uptime"
+
+text_sensor:
+  - platform: ethernet_info
+    mac_address:
+      name: "${device_friendly_name} Ethernet MAC"
