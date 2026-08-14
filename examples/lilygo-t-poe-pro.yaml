@@ -37,7 +37,8 @@ ethernet:
   phy_addr: 0
   power_pin: GPIO5
   # Documentation-only addresses; replace them with values from your network.
-  # Static IP disabled; configure a DHCP reservation for 192.0.2.24 instead.
+  # Static IP is disabled; use DHCP, optionally with a reservation, or uncomment
+  # the block below to configure a static IP.
   # manual_ip:
   #   static_ip: 192.0.2.24
   #   gateway: 192.0.2.254
