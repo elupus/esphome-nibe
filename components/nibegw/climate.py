@@ -2,6 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import climate, sensor
 from esphome.const import CONF_SENSOR
+from esphome.types import ConfigType
 from . import NibeGwComponent, nibegw_ns
 
 AUTO_LOAD = ["sensor"]
@@ -24,7 +25,7 @@ CONFIG_SCHEMA = (
 )
 
 
-async def to_code(config):
+async def to_code(config: ConfigType) -> None:
     var = await climate.new_climate(config)
     await cg.register_component(var, config)
     gw = await cg.get_variable(config[CONF_GATEWAY])
