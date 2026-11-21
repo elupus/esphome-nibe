@@ -49,7 +49,6 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   bool is_connected_ = false;
 
   std::vector<socket_address> udp_sources_;
-  std::vector<socket_address> udp_targets_static_;
   std::map<socket_address, uint32_t> udp_targets_;
   std::map<request_key_type, std::deque<request_data_type>> requests_;
   std::map<request_key_type, request_provider_type> requests_provider_;
@@ -69,7 +68,7 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
 
  public:
   void add_target(const network::IPAddress &ip, int port) {
-    udp_targets_static_.push_back(socket_address(ip, port));
+    udp_targets_.insert_or_assign(socket_address(ip, port), 0);
   }
 
   void add_source_ip(const network::IPAddress &ip) {
