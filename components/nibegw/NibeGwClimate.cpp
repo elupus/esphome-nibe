@@ -9,9 +9,6 @@ namespace nibegw {
 
 static const char *TAG = "nibegw";
 
-// RMU payloads are 1-3 bytes; format_hex_pretty_to() truncates safely if one is ever longer.
-static constexpr size_t HEX_LOG_BUFFER_SIZE = format_hex_pretty_size(8);
-
 const int int16_invalid = -0x8000;
 const int int8_invalid = -0x80;
 const int uint8_invalid = 0xFF;
@@ -156,15 +153,17 @@ void NibeGwClimate::publish_current_temperature() {
 void NibeGwClimate::publish_current_temperature(float value) {
   auto data = set_s16_decimal(value, 0.1, -7);
   data_[RMU_WRITE_INDEX_TEMPERATURE] = data;
-  char hex[HEX_LOG_BUFFER_SIZE];
-  ESP_LOGI(TAG, "Publishing to rmu: 0x%x temp: %f -> %s", address_, value, format_hex_pretty_to(hex, data));
+  char hex[format_hex_pretty_size(data.size())];
+  ESP_LOGI(TAG, "Publishing to rmu: 0x%x temp: %f -> %s", address_, value,
+           format_hex_pretty_to(hex, sizeof(hex), data.data(), data.size()));
 }
 
 void NibeGwClimate::publish_set_point(float value) {
   auto data = set_s16_decimal(value, 0.1, 0);
   data_[RMU_WRITE_INDEX_SETPOINT_SX(this->index_)] = data;
-  char hex[HEX_LOG_BUFFER_SIZE];
-  ESP_LOGI(TAG, "Publishing to rmu: 0x%x target: %f -> %s", address_, value, format_hex_pretty_to(hex, data));
+  char hex[format_hex_pretty_size(data.size())];
+  ESP_LOGI(TAG, "Publishing to rmu: 0x%x target: %f -> %s", address_, value,
+           format_hex_pretty_to(hex, sizeof(hex), data.data(), data.size()));
 }
 
 void NibeGwClimate::dump_config() {
@@ -226,9 +225,9 @@ void NibeGwClimate::setup() {
       return request_data_type{};
     }
 
-    char hex[HEX_LOG_BUFFER_SIZE];
+    char hex[format_hex_pretty_size(it->second.size())];
     ESP_LOGD(TAG, "Responding to rmu: 0x%x index: 0x%x data: %s", address_, it->first,
-             format_hex_pretty_to(hex, it->second));
+             format_hex_pretty_to(hex, sizeof(hex), it->second.data(), it->second.size()));
 
     std::vector<uint8_t> payload;
     payload.push_back(it->first);
