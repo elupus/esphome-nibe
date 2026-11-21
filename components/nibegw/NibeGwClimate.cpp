@@ -153,17 +153,15 @@ void NibeGwClimate::publish_current_temperature() {
 void NibeGwClimate::publish_current_temperature(float value) {
   auto data = set_s16_decimal(value, 0.1, -7);
   data_[RMU_WRITE_INDEX_TEMPERATURE] = data;
-  char hex[format_hex_pretty_size(data.size())];
-  ESP_LOGI(TAG, "Publishing to rmu: 0x%x temp: %f -> %s", address_, value,
-           format_hex_pretty_to(hex, sizeof(hex), data.data(), data.size()));
+  char hex[format_hex_pretty_size(2)];
+  ESP_LOGI(TAG, "Publishing to rmu: 0x%x temp: %f -> %s", address_, value, format_hex_pretty_to(hex, data));
 }
 
 void NibeGwClimate::publish_set_point(float value) {
   auto data = set_s16_decimal(value, 0.1, 0);
   data_[RMU_WRITE_INDEX_SETPOINT_SX(this->index_)] = data;
-  char hex[format_hex_pretty_size(data.size())];
-  ESP_LOGI(TAG, "Publishing to rmu: 0x%x target: %f -> %s", address_, value,
-           format_hex_pretty_to(hex, sizeof(hex), data.data(), data.size()));
+  char hex[format_hex_pretty_size(2)];
+  ESP_LOGI(TAG, "Publishing to rmu: 0x%x target: %f -> %s", address_, value, format_hex_pretty_to(hex, data));
 }
 
 void NibeGwClimate::dump_config() {
@@ -225,9 +223,9 @@ void NibeGwClimate::setup() {
       return request_data_type{};
     }
 
-    char hex[format_hex_pretty_size(it->second.size())];
+    char hex[format_hex_pretty_size(2)];
     ESP_LOGD(TAG, "Responding to rmu: 0x%x index: 0x%x data: %s", address_, it->first,
-             format_hex_pretty_to(hex, sizeof(hex), it->second.data(), it->second.size()));
+             format_hex_pretty_to(hex, it->second));
 
     std::vector<uint8_t> payload;
     payload.push_back(it->first);
