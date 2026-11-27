@@ -5,21 +5,22 @@ import esphome.config_validation as cv
 import esphome.codegen as cg
 from esphome.const import (
     CONF_ID,
+    CONF_KEY,
     CONF_PORT,
 )
 from esphome import pins
 from esphome.components.network import IPAddress
 from enum import IntEnum, Enum
-from esphome.components import uart, socket
+from esphome.components import noise, uart, socket
 from esphome.types import ConfigType
 
-AUTO_LOAD = ["sensor", "climate"]
 DEPENDENCIES = ["logger"]
 
 nibegw_ns = cg.esphome_ns.namespace("nibegw")
 NibeGwComponent = nibegw_ns.class_("NibeGwComponent", cg.Component, uart.UARTDevice)
 NibeGwTransport = nibegw_ns.class_("NibeGwTransport")
 NibeGwUdpTransport = nibegw_ns.class_("NibeGwUdpTransport", NibeGwTransport)
+NibeGwUdpNoiseTransport = nibegw_ns.class_("NibeGwUdpNoiseTransport", NibeGwTransport)
 
 CONF_DIR_PIN = "dir_pin"
 CONF_TARGET = "target"
@@ -27,6 +28,20 @@ CONF_TARGET_PORT = "port"
 CONF_TARGET_IP = "ip"
 CONF_ACKNOWLEDGE = "acknowledge"
 CONF_UDP = "udp"
+CONF_UDP_NOISE = "udp_noise"
+CONF_REQUESTS = "requests"
+
+
+def AUTO_LOAD(config: ConfigType) -> list[str]:
+    components = ["sensor", "climate"]
+
+    # Encryption is only needed for udp_noise. ESPHome probes with an
+    # empty config to find all possible dependencies.
+    if not config or CONF_UDP_NOISE in config:
+        components.append("noise")
+
+    return components
+
 
 CONF_ACKNOWLEDGE_MODBUS40 = "modbus40"
 CONF_ACKNOWLEDGE_RMU40 = "rmu40"
@@ -76,14 +91,18 @@ def real_enum(enum: Enum):
 def _consume_nibegw_sockets(config: ConfigType) -> ConfigType:
     """Register socket needs for nibegw component."""
     # MQTT needs 1 socket for the broker connection
-    udp = config[CONF_UDP]
-    socket_count = len(udp[CONF_PORTS])
+    if udp := config.get(CONF_UDP):
+        socket_count = len(udp[CONF_PORTS])
+    else:
+        socket_count = 1
     socket.consume_sockets(socket_count, "nibegw")(config)
     return config
 
 
 def _upgrade_ports(config: ConfigType) -> ConfigType:
-    udp = config[CONF_UDP]
+    udp = config.get(CONF_UDP)
+    if udp is None:
+        return config
     if port_number := udp[CONF_WRITE_PORT]:
         udp[CONF_PORTS].insert(
             0,
@@ -145,6 +164,29 @@ UDP_SCHEMA = cv.Schema(
     }
 )
 
+REQUEST_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_ADDRESS): cv.Any(real_enum(Addresses), int),
+        cv.Required(CONF_TOKEN): cv.Any(real_enum(Token), int),
+    }
+)
+
+
+UDP_NOISE_SCHEMA = cv.Schema(
+    {
+        cv.GenerateID(): cv.declare_id(NibeGwUdpNoiseTransport),
+        cv.Required(CONF_KEY): cv.sensitive(noise.validate_encryption_key),
+        cv.Optional(CONF_PORT, default=9999): cv.port,
+        cv.Optional(
+            CONF_REQUESTS,
+            default=[
+                {CONF_ADDRESS: "MODBUS40", CONF_TOKEN: "MODBUS_READ"},
+                {CONF_ADDRESS: "MODBUS40", CONF_TOKEN: "MODBUS_WRITE"},
+            ],
+        ): cv.ensure_list(REQUEST_SCHEMA),
+    }
+)
+
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
         {
@@ -152,13 +194,15 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_ACKNOWLEDGE, default=[]): [
                 cv.Any(addresses_string, cv.Coerce(int))
             ],
-            cv.Required(CONF_UDP): UDP_SCHEMA,
+            cv.Optional(CONF_UDP): UDP_SCHEMA,
+            cv.Optional(CONF_UDP_NOISE): UDP_NOISE_SCHEMA,
             cv.Optional(CONF_DIR_PIN): pins.gpio_output_pin_schema,
             cv.Optional(CONF_CONSTANTS, default=[]): cv.ensure_list(CONSTANTS_SCHEMA),
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
     .extend(uart.UART_DEVICE_SCHEMA),
+    cv.has_exactly_one_key(CONF_UDP, CONF_UDP_NOISE),
     _upgrade_ports,
     _consume_nibegw_sockets,
 )
@@ -197,6 +241,19 @@ async def to_code(config):
 
         for source in udp[CONF_SOURCE]:
             cg.add(transport.add_source_ip(IPAddress(str(source))))
+
+    if udp_noise := config.get(CONF_UDP_NOISE):
+        transport = cg.new_Pvariable(udp_noise[CONF_ID])
+        cg.add(var.set_transport(transport))
+        cg.add(transport.set_psk(noise.new_psk_progmem(udp_noise[CONF_KEY])))
+        cg.add(transport.set_port(udp_noise[CONF_PORT]))
+
+        for request in udp_noise[CONF_REQUESTS]:
+            cg.add(
+                transport.add_allowed_request(
+                    request[CONF_ADDRESS], request[CONF_TOKEN]
+                )
+            )
 
     if config[CONF_ACKNOWLEDGE]:
         for address in config[CONF_ACKNOWLEDGE]:
