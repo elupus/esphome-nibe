@@ -13,31 +13,12 @@
 #include "esphome/core/log.h"
 #include "esphome/core/version.h"
 #include "esphome/components/uart/uart.h"
-#include "esphome/components/network/ip_address.h"
-#include "esphome/components/network/util.h"
-#include "esphome/components/socket/socket.h"
 
 #include "NibeGw.h"
-#include "NibeGwSockAddress.h"
+#include "NibeGwTransport.h"
 
 namespace esphome {
 namespace nibegw {
-
-using request_key_type = std::tuple<uint16_t, uint8_t>;
-using request_data_type = std::vector<uint8_t>;
-using request_provider_type = std::function<request_data_type(void)>;
-using message_listener_type = std::function<void(const request_data_type &)>;
-
-#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 0)
-using socket_ptr_type = std::unique_ptr<socket::ListenSocket>;
-#else
-using socket_ptr_type = std::unique_ptr<socket::Socket>;
-#endif
-
-struct request_socket_type {
-  int port;
-  socket_ptr_type socket;
-};
 
 class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDevice {
   float get_setup_priority() const override {
@@ -45,40 +26,24 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
   }
   static constexpr const char *TAG = "nibegw";
   static constexpr size_t REQUESTS_QUEUE_MAX = 3;
-  static constexpr uint32_t TARGET_TIMEOUT_MS = 120000;
-  bool is_connected_ = false;
-
-  std::vector<socket_address> udp_sources_;
-  std::vector<socket_address> udp_targets_static_;
-  std::map<socket_address, uint32_t> udp_targets_;
   std::map<request_key_type, std::deque<request_data_type>> requests_;
   std::map<request_key_type, request_provider_type> requests_provider_;
-  std::map<request_key_type, request_socket_type> requests_sockets_;
   std::map<request_key_type, std::vector<message_listener_type>> message_listeners_;
   HighFrequencyLoopRequester high_freq_;
 
   NibeGw *gw_;
+  NibeGwTransport *transport_{nullptr};
 
   void callback_msg_received(const uint8_t *data, int len);
+  bool queue_client_request(uint16_t address, uint8_t token, request_data_type request);
   int callback_msg_token_received(uint16_t address, uint8_t command, uint8_t *data);
 
-  void run_request_socket(const request_key_type &key, request_socket_type &data);
-  void recv_local_socket(socket_ptr_type &fd, int address, int token);
-
-  socket_ptr_type bind_local_socket(int port);
-
  public:
-  void add_target(const network::IPAddress &ip, int port) {
-    udp_targets_static_.push_back(socket_address(ip, port));
-  }
-
-  void add_source_ip(const network::IPAddress &ip) {
-    udp_sources_.push_back(socket_address(ip, 0));
-  }
-
-  void add_socket_request(int address, int token, int port) {
-    auto &handler = requests_sockets_[request_key_type(address, token)];
-    handler.port = port;
+  void set_transport(NibeGwTransport *transport) {
+    transport_ = transport;
+    transport_->set_request_callback([this](uint16_t address, uint8_t token, request_data_type request) {
+      return queue_client_request(address, token, std::move(request));
+    });
   }
 
   void set_request(int address, int token, request_data_type request) {
@@ -118,7 +83,9 @@ class NibeGwComponent : public esphome::Component, public esphome::uart::UARTDev
     return (it != requests_.end()) ? it->second : empty;
   }
 
-  static constexpr size_t get_queue_capacity() { return REQUESTS_QUEUE_MAX; }
+  static constexpr size_t get_queue_capacity() {
+    return REQUESTS_QUEUE_MAX;
+  }
 
   void add_acknowledge(int address) {
     gw_->setAcknowledge(address, true);

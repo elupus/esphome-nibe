@@ -181,6 +181,82 @@ sensor:
   
 ```
 
+## Encrypted UDP (`udp_noise`)
+
+As an alternative to the plaintext `udp` block, the gateway can use an encrypted
+transport on a single UDP port. It uses the same Noise handshake and libraries
+as the ESPHome native API (`Noise_NNpsk0_25519_ChaChaPoly_SHA256`) with a
+pre-shared key, so only clients knowing the key can read telegrams or send
+requests. `udp` and `udp_noise` can not be used at the same time.
+
+```yaml
+nibegw:
+  udp_noise:
+    # Pre-shared key, generate with: openssl rand -base64 32
+    key: !secret nibegw_noise_key
+
+    # Optional port to listen on. Defaults to 9999
+    port: 9999
+
+    # Optional list of requests clients may queue. Defaults to MODBUS40
+    # read and write requests. When given, only the listed ones are allowed.
+    requests:
+      - address: MODBUS40
+        token: MODBUS_READ
+      - address: MODBUS40
+        token: MODBUS_WRITE
+      - address: RMU40_S3
+        token: RMU_WRITE
+
+  acknowledge:
+    - MODBUS40
+```
+
+Notes:
+
+* Sessions are always initiated by the client. Static `target`s and multicast are
+  not available; a client that only listens must keep its session alive.
+* Client source addresses are not filtered, the key is the authentication.
+* Requires an ESPHome version that includes the `noise` component.
+
+### Protocol
+
+The packet layout follows the [WireGuard](https://www.wireguard.com/protocol/)
+data plane. All integers are little endian, every packet starts with a type
+byte followed by three zero bytes.
+
+| Packet                 | Direction        | Content                                                  |
+|------------------------|------------------|----------------------------------------------------------|
+| `HANDSHAKE_INITIATION` | client → gateway | `1`, sender index (u32), noise handshake message 1       |
+| `HANDSHAKE_RESPONSE`   | gateway → client | `2`, sender index (u32), receiver index (u32), message 2 |
+| `TRANSPORT_DATA`       | both             | `4`, receiver index (u32), counter (u64), ciphertext     |
+
+The handshake is `Noise_NNpsk0_25519_ChaChaPoly_SHA256` with the prologue
+`nibegw-udp-noise-v1`. Each side picks a random index for the session and the
+peer addresses its transport data to that index.
+
+Transport data is encrypted with ChaCha20-Poly1305 (IETF), nonce `00 00 00 00`
+followed by the counter, without associated data. Counters must increase,
+older or repeated ones are dropped. Each direction uses its own key, derived
+from the corresponding Noise transport key `k` as the first 32 bytes of
+`ENCRYPT(k, n=2^64-2, ad="", 32 zero bytes)`.
+
+The plaintext is:
+
+* empty for a keepalive, which the gateway echoes,
+* a request from the client: address (u16), token (u8), request frame,
+* a telegram from the gateway: the frame as received from the heat pump.
+
+The client confirms a new session by sending transport data, normally a
+keepalive, directly after the handshake. Only confirmed sessions receive
+telegrams, and confirming a session drops older sessions from the same client
+address. Sessions without traffic from the client expire after 2 minutes. At
+most 4 sessions are active, the least recently active is dropped.
+
+Invalid handshakes are dropped and logged by the gateway. Unlike WireGuard the
+handshake uses a pre-shared key instead of static keys, and there are no
+cookies or periodic rekeying.
+
 ## Parsing
 
 Currently no actual parsing of the payload is performed on the ESPHome device, this must be handled by external application.
