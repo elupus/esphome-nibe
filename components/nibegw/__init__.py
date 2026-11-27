@@ -18,6 +18,8 @@ DEPENDENCIES = ["logger"]
 
 nibegw_ns = cg.esphome_ns.namespace("nibegw")
 NibeGwComponent = nibegw_ns.class_("NibeGwComponent", cg.Component, uart.UARTDevice)
+NibeGwTransport = nibegw_ns.class_("NibeGwTransport")
+NibeGwUdpTransport = nibegw_ns.class_("NibeGwUdpTransport", NibeGwTransport)
 
 CONF_DIR_PIN = "dir_pin"
 CONF_TARGET = "target"
@@ -134,6 +136,7 @@ PORTS_SCHEMA = cv.Schema(
 
 UDP_SCHEMA = cv.Schema(
     {
+        cv.GenerateID(): cv.declare_id(NibeGwUdpTransport),
         cv.Optional(CONF_TARGET, []): cv.ensure_list(TARGET_SCHEMA),
         cv.Optional(CONF_READ_PORT, default=9999): cv.port,
         cv.Optional(CONF_WRITE_PORT, default=10000): cv.port,
@@ -175,22 +178,25 @@ async def to_code(config):
     await uart.register_uart_device(var, config)
 
     if udp := config.get(CONF_UDP):
+        transport = cg.new_Pvariable(udp[CONF_ID])
+        cg.add(var.set_transport(transport))
+
         for target in udp[CONF_TARGET]:
             cg.add(
-                var.add_target(
+                transport.add_target(
                     IPAddress(str(target[CONF_TARGET_IP])), target[CONF_TARGET_PORT]
                 )
             )
 
         for port in udp[CONF_PORTS]:
             cg.add(
-                var.add_socket_request(
+                transport.add_socket_request(
                     port[CONF_ADDRESS], port[CONF_TOKEN], port[CONF_PORT]
                 )
             )
 
         for source in udp[CONF_SOURCE]:
-            cg.add(var.add_source_ip(IPAddress(str(source))))
+            cg.add(transport.add_source_ip(IPAddress(str(source))))
 
     if config[CONF_ACKNOWLEDGE]:
         for address in config[CONF_ACKNOWLEDGE]:

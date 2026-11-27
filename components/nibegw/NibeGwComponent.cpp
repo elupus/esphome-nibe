@@ -1,5 +1,7 @@
 #include "NibeGwComponent.h"
 
+#include "esphome/components/network/util.h"
+
 namespace esphome {
 
 namespace nibegw {
@@ -38,57 +40,21 @@ void NibeGwComponent::callback_msg_received(const uint8_t *data, int len) {
     }
   }
 
-  if (!is_connected_) {
-    return;
-  }
-
-  /* always sending standard data from modbus read token */
-  auto &udp_read_ = requests_sockets_[request_key_type(MODBUS40, READ_TOKEN)].socket;
-  if (!udp_read_) {
-    return;
-  }
-
-  // Send to all UDP targets
-  for (auto &&[target, timestamp] : udp_targets_) {
-    int result = udp_read_->sendto(data, len, 0, (sockaddr *) &target.storage, target.len);
-    if (result < 0) {
-      ESP_LOGW(TAG, "UDP sendto failed to %s, error: %d", target.str().c_str(), errno);
-    }
+  if (transport_) {
+    transport_->send_telegram(std::span<const uint8_t>(data, len));
   }
 }
 
-void NibeGwComponent::recv_local_socket(socket_ptr_type &fd, int address, int token) {
-  request_data_type request(MAX_DATA_LEN);
-
-  socket_address from;
-  int n = fd->recvfrom(request.data(), request.size(), (sockaddr *) &from.storage, &from.len);
-  if (n < 0) {
-    if (errno != EAGAIN && errno != EWOULDBLOCK) {
-      ESP_LOGW(TAG, "recvfrom error on read socket: %d", errno);
-    }
-    return;
+bool NibeGwComponent::queue_client_request(uint16_t address, uint8_t token, request_data_type request) {
+  if (request.size() > MAX_DATA_LEN) {
+    return false;
   }
-  request.resize(n);
-
-  if (udp_sources_.size() &&
-      std::none_of(udp_sources_.begin(), udp_sources_.end(), [&](auto &source) { return from.matches(source); })) {
-    ESP_LOGW(TAG, "UDP Packet wrong ip ignored %s", from.str().c_str());
-    return;
-  }
-
   if (gw_->checkSlaveData(request.data(), request.size()) != PACKET_OK) {
-    ESP_LOGW(TAG, "Received invalid packet from %s, %d bytes", from.str().c_str(), n);
-    return;
-  }
-
-  /* store this as a new target */
-  uint32_t now = millis();
-  auto [it, inserted] = udp_targets_.insert_or_assign(from, now);
-  if (inserted) {
-    ESP_LOGI(TAG, "New target added %s", from.str().c_str());
+    return false;
   }
 
   add_queued_request(address, token, std::move(request));
+  return true;
 }
 
 static int copy_request(const request_data_type &request, uint8_t *data) {
@@ -132,92 +98,17 @@ void NibeGwComponent::setup() {
 
 void NibeGwComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "NibeGw");
-  for (auto &&[address, timeout] : udp_targets_) {
-    ESP_LOGCONFIG(TAG, " Target: %s", address.str().c_str());
-  }
-  for (auto &&address : udp_sources_) {
-    ESP_LOGCONFIG(TAG, " Source: %s", address.str().c_str());
-  }
-  for (auto const &x : requests_sockets_) {
-    ESP_LOGCONFIG(TAG, " Handler %x:%x Port: %d", std::get<0>(x.first), std::get<1>(x.first), x.second.port);
+  if (transport_) {
+    transport_->dump_config();
   }
   for (auto const &x : message_listeners_) {
     ESP_LOGCONFIG(TAG, " Listeners %x:%x Count: %zu", std::get<0>(x.first), std::get<1>(x.first), x.second.size());
   }
 }
 
-socket_ptr_type NibeGwComponent::bind_local_socket(int port) {
-  auto fd = socket::socket_ip_loop_monitored(SOCK_DGRAM, 0);
-  if (fd) {
-    // Set non-blocking
-    fd->setblocking(false);
-
-    socket_address address(port);
-
-    if (fd->bind((sockaddr *) &address.storage, address.len) < 0) {
-      ESP_LOGE(TAG, "Failed to bind socket to port %d, error: %d", port, errno);
-      fd.reset();
-    } else {
-      ESP_LOGI(TAG, "UDP socket bound to port %d", port);
-    }
-  } else {
-    ESP_LOGE(TAG, "Failed to create socket, error: %d", errno);
-  }
-  return fd;
-}
-
-void NibeGwComponent::run_request_socket(const request_key_type &key, request_socket_type &data) {
-  if (!is_connected_) {
-    if (data.socket) {
-      ESP_LOGI(TAG, "UDP socket released for port %d", data.port);
-      data.socket.reset();
-    }
-    return;
-  }
-
-  if (!data.socket) {
-    data.socket = bind_local_socket(data.port);
-  }
-
-  if (!data.socket) {
-    return;
-  }
-
-  if (!data.socket->ready()) {
-    return;
-  }
-
-  auto &[address, token] = key;
-  recv_local_socket(data.socket, address, token);
-}
-
 void NibeGwComponent::loop() {
-  // Handle network connection state
-  if (network::is_connected()) {
-    if (!is_connected_) {
-      ESP_LOGI(TAG, "Connecting network ports.");
-      is_connected_ = true;
-    }
-  } else {
-    if (is_connected_) {
-      ESP_LOGI(TAG, "Disconnecting network ports.");
-      is_connected_ = false;
-    }
-  }
-
-  uint32_t now = millis();
-
-  // Static targets are always active
-  for (auto &target : udp_targets_static_) {
-    udp_targets_[target] = now;
-  }
-
-  // Check for timeouts on targets
-  std::erase_if(udp_targets_, [&](const auto &item) { return now - item.second > TARGET_TIMEOUT_MS; });
-
-  // Poll sockets for incoming packets
-  for (auto &[key, data] : requests_sockets_) {
-    run_request_socket(key, data);
+  if (transport_) {
+    transport_->loop(network::is_connected());
   }
 
   // Handle high frequency loop requirement
